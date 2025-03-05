@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "739116026034",
+    "project_id": "quiz-craft-ai",
+    "storage_bucket": "quiz-craft-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:739116026034:android:b6eeaed95ec500267ae1ab",
+        "android_client_info": {
+          "package_name": "com.example.quiz_craft_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2dJ7Xua09Y4nzUXrT-E4xU1FthcEkufg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

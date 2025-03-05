@@ -28,7 +28,7 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
       "subtitle": "Use multiple formats to generate quizzes effortlessly.",
     },
     {
-      "image": "assets/image/quiztime.png",
+      "image": "assets/image/start.png",
       "title": "Enhance Your Learning Experience",
       "subtitle": "Track progress, share quizzes, and test your knowledge",
     },
