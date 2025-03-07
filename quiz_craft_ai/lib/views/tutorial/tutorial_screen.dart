@@ -39,7 +39,7 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
       _controller.nextPage(
           duration: Duration(milliseconds: 500), curve: Curves.ease);
     } else {
-      context.go('/login'); // Navigate to login on last page
+      context.go('/signin'); // Navigate to login on last page
     }
   }
 
@@ -96,7 +96,7 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
               children: [
                 // Skip Button
                 TextButton(
-                  onPressed: () => context.go('/login'), // Skip to Login
+                  onPressed: () => context.go('/signin'), // Skip to Login
                   child: Text("Skip",
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

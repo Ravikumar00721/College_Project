@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>739116026034-ca16cneumd8l1dvmqqojdb1jn9vgb3oj.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.739116026034-ca16cneumd8l1dvmqqojdb1jn9vgb3oj</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCBqoy-EPLBuW66eyBxtDfscFbF9Lx6fhU</string>
+	<key>GCM_SENDER_ID</key>
+	<string>739116026034</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.quizCraftAi</string>
+	<key>PROJECT_ID</key>
+	<string>quiz-craft-ai</string>
+	<key>STORAGE_BUCKET</key>
+	<string>quiz-craft-ai.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:739116026034:ios:b1eca42618fe40867ae1ab</string>
+</dict>
+</plist>
