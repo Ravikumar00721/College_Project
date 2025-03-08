@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -23,22 +25,40 @@ class _SplashScreenState extends State<SplashScreen> {
       });
     });
 
-    Timer(Duration(seconds: 3), () {
-      context.go('/walkthroughscreen');
+    // Check tutorial status and authentication state
+    Timer(Duration(seconds: 3), () async {
+      final prefs = await SharedPreferences.getInstance();
+      bool seenTutorial = prefs.getBool("seen_tutorial") ?? false;
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        if (seenTutorial) {
+          context.go('/home'); // ✅ User logged in & tutorial seen → Home
+        } else {
+          context.go(
+              '/tutorial'); // ✅ User logged in & tutorial NOT seen → Tutorial
+        }
+      } else {
+        if (seenTutorial) {
+          context.go('/login'); // ✅ User NOT logged in & tutorial seen → Login
+        } else {
+          context.go(
+              '/tutorial'); // ✅ User NOT logged in & tutorial NOT seen → Tutorial
+        }
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Change as needed
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Lottie Animation
             Lottie.asset('assets/animations/splash.json', height: 300),
-
             SizedBox(height: 20),
 
             // Stylish Fade-in Text

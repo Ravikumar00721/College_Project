@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class WalkthroughScreen extends StatefulWidget {
@@ -30,99 +31,131 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
     {
       "image": "assets/image/start.png",
       "title": "Enhance Your Learning Experience",
-      "subtitle": "Track progress, share quizzes, and test your knowledge",
+      "subtitle": "Track progress, share quizzes, and test your knowledge.",
     },
   ];
 
   void _nextPage() {
     if (_currentPage < walkthroughData.length - 1) {
       _controller.nextPage(
-          duration: Duration(milliseconds: 500), curve: Curves.ease);
+        duration: Duration(milliseconds: 500),
+        curve: Curves.ease,
+      );
     } else {
-      context.go('/signin'); // Navigate to login on last page
+      _finishWalkthrough();
     }
+  }
+
+  void _skipTutorial() {
+    _finishWalkthrough();
+  }
+
+  Future<void> _finishWalkthrough() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("seen_tutorial", true);
+    context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _controller,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              itemCount: walkthroughData.length,
-              itemBuilder: (context, index) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(walkthroughData[index]["image"]!, height: 300),
-                    SizedBox(height: 20),
-                    Text(
-                      walkthroughData[index]["title"]!,
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemCount: walkthroughData.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          walkthroughData[index]["image"]!,
+                          height: 300,
+                        ),
+                        SizedBox(height: 30),
+                        Text(
+                          walkthroughData[index]["title"]!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 10),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 15),
+                          child: Text(
+                            walkthroughData[index]["subtitle"]!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[700]),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 10),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 30),
-                      child: Text(
-                        walkthroughData[index]["subtitle"]!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  );
+                },
+              ),
+            ),
+
+            // Page Indicator & Navigation Buttons
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Skip Button (Hidden on last page)
+                  _currentPage < walkthroughData.length - 1
+                      ? TextButton(
+                          onPressed: _skipTutorial,
+                          child: Text(
+                            "Skip",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        )
+                      : SizedBox(width: 60), // Keeps layout aligned
+
+                  // Page Indicator
+                  SmoothPageIndicator(
+                    controller: _controller,
+                    count: walkthroughData.length,
+                    effect: ExpandingDotsEffect(
+                      activeDotColor: Colors.blue,
+                      dotHeight: 8,
+                      dotWidth: 8,
+                    ),
+                  ),
+
+                  // Next or Get Started Button
+                  TextButton(
+                    onPressed: _nextPage,
+                    child: Text(
+                      _currentPage == walkthroughData.length - 1
+                          ? "Get Started"
+                          : "Next",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
-          ),
-
-          // Bottom Bar (80px height)
-          Container(
-            height: 80,
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(color: Colors.white, boxShadow: [
-              BoxShadow(
-                  color: Colors.black12, blurRadius: 4, offset: Offset(0, -2))
-            ]),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Skip Button
-                TextButton(
-                  onPressed: () => context.go('/signin'), // Skip to Login
-                  child: Text("Skip",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-
-                // Page Indicator
-                SmoothPageIndicator(
-                  controller: _controller,
-                  count: walkthroughData.length,
-                  effect: WormEffect(activeDotColor: Colors.blue),
-                ),
-
-                // Next or Get Started Button
-                TextButton(
-                  onPressed: _nextPage,
-                  child: Text(
-                    _currentPage == walkthroughData.length - 1
-                        ? "Get Started"
-                        : "Next",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
