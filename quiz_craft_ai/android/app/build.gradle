@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "com.example.quiz_craft_ai"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "25.1.8937393"
 
     compileOptions {

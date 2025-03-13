@@ -1,23 +1,103 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiz_craft_ai/services/auth_services.dart';
 
-import '../../core/themes.dart'; // Import color theme
+import '../../core/themes.dart';
+import 'create_profile.dart'; // Import Create Profile Bottom Sheet
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final AuthService authService = AuthService();
+  User? user = FirebaseAuth.instance.currentUser;
+  bool _profileExists = false; // ✅ Tracks if profile already exists
+  bool _profileDialogShown = false; // Prevent multiple pop-ups
+
+  String fullName = "Guest User"; // Default name
+  String email = "user@example.com"; // Default email
+  String profileImage = ""; // Default empty image
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile(); // Fetch user data from Firestore
+  }
+
+  // ✅ Fetch User Profile from Firestore
+  Future<void> _fetchUserProfile() async {
+    if (user != null) {
+      setState(() {
+        email = user!.email ?? "user@example.com"; // Update email
+      });
+
+      try {
+        DocumentSnapshot doc = await FirebaseFirestore.instance
+            .collection("users")
+            .doc(email)
+            .get();
+
+        if (doc.exists) {
+          setState(() {
+            fullName = doc["fullName"] ?? "Guest User";
+            profileImage = doc["profileImagePath"] ?? "";
+            _profileExists = true; // ✅ Profile exists
+          });
+        } else {
+          setState(() {
+            _profileExists = false; // Profile doesn't exist
+          });
+        }
+      } catch (e) {
+        print("🔥 Error fetching profile: $e");
+      }
+
+      // ✅ Show bottom sheet only if profile does NOT exist
+      if (!_profileExists) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _showCreateProfileBottomSheet());
+      }
+    }
+  }
+
+  // ✅ Show Bottom Sheet ONLY if Profile Doesn't Exist
+  Future<void> _showCreateProfileBottomSheet() async {
+    if (!_profileDialogShown && !_profileExists) {
+      _profileDialogShown = true; // Prevent multiple pop-ups
+
+      bool? result = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        enableDrag: false, // Prevents user from dismissing manually
+        barrierColor: Colors.black.withOpacity(0.5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => CreateProfileBottomSheet(),
+      );
+
+      if (result == true) {
+        setState(() {
+          _profileExists = true; // ✅ Mark profile as existing after submit
+        });
+        _fetchUserProfile(); // Reload profile after submission
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    User? user = FirebaseAuth.instance.currentUser; // Get logged-in user
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text("Home", style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: AppColors.primary, // Use defined color
+        backgroundColor: AppColors.primary,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
@@ -32,15 +112,15 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       drawer: Drawer(
-        backgroundColor: AppColors.background, // Use defined color
+        backgroundColor: AppColors.background,
         child: Column(
           children: [
-            // Custom Drawer Header
+            // 🔹 Custom Drawer Header
             Container(
               height: 200,
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.secondary, // Use soft pink header color
+                color: AppColors.secondary,
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
@@ -48,20 +128,18 @@ class HomeScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // Profile Icon on Left
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.accent, // Teal Profile Icon
-                    child: Icon(Icons.person, color: Colors.black, size: 32),
-                  ),
+                  // 🔹 Profile Image (Default if Not Available)
+                  _buildProfileAvatar(),
+
                   SizedBox(width: 16),
-                  // Name & Email aligned to left
+
+                  // 🔹 Name & Email aligned to left
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Guest User", // Use default name if null
+                        fullName,
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 18,
@@ -70,7 +148,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        user?.email ?? "user@example.com",
+                        email,
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 14,
@@ -81,10 +159,10 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            // Drawer Tiles
+
+            // 🔹 Drawer Tiles
             ListTile(
-              leading:
-                  Icon(Icons.person, color: AppColors.primary), // Cyan icon
+              leading: Icon(Icons.person, color: AppColors.primary),
               title: Text("My Profile",
                   style: TextStyle(color: AppColors.textPrimary)),
               onTap: () {
@@ -92,8 +170,7 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading:
-                  Icon(Icons.logout, color: AppColors.primary), // Cyan icon
+              leading: Icon(Icons.logout, color: AppColors.primary),
               title: Text("Sign Out",
                   style: TextStyle(color: AppColors.textPrimary)),
               onTap: () async {
@@ -105,39 +182,28 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       body: Container(
-        color: AppColors.background, // Light green background
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(Icons.home,
-                  size: 80, color: AppColors.primary), // Cyan home icon
-              SizedBox(height: 20),
-              Text(
-                "Welcome, ${user?.email ?? 'User'}!",
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  await authService.signOut();
-                  context.go("/login");
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary, // Cyan button
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                child: Text("Sign Out"),
-              ),
-            ],
-          ),
-        ),
+        color: AppColors.background,
+        child: Center(),
       ),
     );
+  }
+
+  // ✅ **Profile Avatar Widget**
+  Widget _buildProfileAvatar() {
+    return profileImage.isNotEmpty
+        ? CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white,
+            backgroundImage: NetworkImage(profileImage),
+          )
+        : CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white,
+            child: SvgPicture.asset(
+              'assets/image/buisness.svg',
+              width: 40,
+              height: 40,
+            ),
+          );
   }
 }

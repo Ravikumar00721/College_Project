@@ -1,9 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../models/usermodel.dart';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // 🔹 Sign in with Email & Password
   Future<User?> signInWithEmail(String email, String password) async {
@@ -101,5 +105,28 @@ class AuthService {
       print("Apple Sign-In Error: $e");
       return null;
     }
+  }
+
+  Future<void> saveUserProfile(ProfileModel profile) async {
+    try {
+      await _firestore.collection("users").doc(profile.email).set(
+            profile.toMap(),
+            SetOptions(
+                merge: true), // ✅ Merge existing data instead of overwriting
+          );
+      print("✅ User profile saved successfully in Firestore.");
+    } catch (e) {
+      print("🔥 Error saving profile: $e");
+    }
+  }
+
+  // 🔹 Get User Profile from Firestore
+  Future<ProfileModel?> getUserProfile(String email) async {
+    DocumentSnapshot doc =
+        await _firestore.collection("users").doc(email).get();
+    if (doc.exists) {
+      return ProfileModel.fromMap(doc.data() as Map<String, dynamic>);
+    }
+    return null;
   }
 }
