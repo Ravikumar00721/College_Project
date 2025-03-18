@@ -26,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String email = "user@example.com";
   String profileImage = "";
   File? _pickedImage;
+  String? selectedFileName;
+  String? extractedText;
 
   @override
   void initState() {
@@ -165,6 +167,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               context.go('/myprofile');
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.history,
+              color: AppColors.primary,
+            ),
+            title: Text(
+              "History",
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
+            onTap: () {
+              context.go("");
             },
           ),
           ListTile(
@@ -394,26 +409,73 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [
-              Colors.orangeAccent,
-              Colors.redAccent
-            ], // Matches Daily Challenge
+            colors: [Colors.orangeAccent, Colors.redAccent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
         padding: EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: _buildUploadButton(Icons.picture_as_pdf, "Upload PDF",
-                  OCRServices.pickPDFAndExtractText, Colors.redAccent),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildUploadButton(
+                    Icons.picture_as_pdf,
+                    "Upload PDF",
+                    () async {
+                      final result = await OCRServices.pickPDFAndExtractText();
+                      if (result != null) {
+                        setState(() {
+                          selectedFileName = result['fileName'];
+                          extractedText = result['extractedText'];
+                        });
+                      }
+                    },
+                    Colors.redAccent,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: _buildUploadButton(
+                    Icons.image,
+                    "Pick Image",
+                    () async {
+                      final result =
+                          await OCRServices.pickImageAndExtractText();
+                      if (result != null) {
+                        setState(() {
+                          selectedFileName = result['fileName'];
+                          extractedText = result['extractedText'];
+                        });
+                      }
+                    },
+                    Colors.blueAccent,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(width: 10),
-            Expanded(
-              child: _buildUploadButton(Icons.image, "Pick Image",
-                  OCRServices.pickImageAndExtractText, Colors.blueAccent),
-            ),
+            SizedBox(height: 8),
+            if (selectedFileName != null) ...[
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Text extracted successfully!',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
