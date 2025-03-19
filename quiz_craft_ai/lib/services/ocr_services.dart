@@ -2,46 +2,56 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart' as pdfx;
-import 'package:quiz_craft_ai/services/textdata.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as syncfusion;
 
-import '../models/quizmodel.dart';
-
 class OCRServices {
-  static final FirestoreService _firestoreService = FirestoreService();
+  static final ImagePicker _imagePicker = ImagePicker();
 
-  /// 📌 Updated Image Handler
-  static Future<Map<String, String>?> pickImageAndExtractText() async {
+  static Future<Map<String, String>?> pickImageAndExtractText(
+      BuildContext context) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
+      // Show a dialog to choose between camera and gallery
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Select Image Source"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt),
+                title: Text("Camera"),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text("Gallery"),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
       );
 
-      if (result != null && result.files.single.path != null) {
-        final imageFile = File(result.files.single.path!);
-        final fileName = result.files.single.name;
-        final extractedText = await extractTextFromImage(imageFile);
+      if (source == null) return null; // User canceled
 
-        // Save to Firestore
-        final textData = TextDataModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-          extractedText: extractedText,
-          timestamp: DateTime.now(),
-        );
+      // Pick image
+      final pickedFile = await _imagePicker.pickImage(source: source);
+      if (pickedFile == null) return null; // No image selected
 
-        await _firestoreService.saveExtractedText(textData);
+      final imageFile = File(pickedFile.path);
+      final fileName = pickedFile.name;
+      final extractedText = await extractTextFromImage(imageFile);
 
-        return {
-          'fileName': fileName,
-          'extractedText': extractedText,
-        };
-      }
-      return null;
+      return {
+        'fileName': fileName,
+        'extractedText': extractedText,
+      };
     } catch (e) {
       print("🔥 Image processing error: $e");
       return {'fileName': "", 'extractedText': "Error: ${e.toString()}"};
@@ -76,16 +86,6 @@ class OCRServices {
         final pdfFile = File(result.files.single.path!);
         final fileName = result.files.single.name;
         final extractedText = await extractTextFromPDF(pdfFile);
-
-        // Save to Firestore
-        final textData = TextDataModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-          extractedText: extractedText,
-          timestamp: DateTime.now(),
-        );
-
-        await _firestoreService.saveExtractedText(textData);
 
         return {
           'fileName': fileName,

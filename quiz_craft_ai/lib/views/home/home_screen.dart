@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:quiz_craft_ai/services/auth_services.dart';
 
 import '../../core/themes.dart';
+import '../../models/quizmodel.dart';
 import '../../services/ocr_services.dart';
+import '../../services/textdata.dart';
 import 'create_profile.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +18,7 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final AuthService authService = AuthService();
   User? user = FirebaseAuth.instance.currentUser;
   bool _profileExists = false;
@@ -28,11 +30,31 @@ class _HomeScreenState extends State<HomeScreen> {
   File? _pickedImage;
   String? selectedFileName;
   String? extractedText;
+  // Add in HomeScreen state
+  late TextEditingController _textController;
+  String? _selectedInputSource; // 'image', 'pdf', or 'text'
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _textController = TextEditingController();
     _fetchUserProfile();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove observer
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Clear inputs when the app resumes
+      _clearInputs();
+    }
   }
 
   Future<void> _fetchUserProfile() async {
@@ -427,8 +449,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       final result = await OCRServices.pickPDFAndExtractText();
                       if (result != null) {
                         setState(() {
-                          selectedFileName = result['fileName'];
-                          extractedText = result['extractedText'];
+                          _selectedInputSource = 'pdf';
+                          _textController.text = result['extractedText']!;
                         });
                       }
                     },
@@ -442,11 +464,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     "Pick Image",
                     () async {
                       final result =
-                          await OCRServices.pickImageAndExtractText();
+                          await OCRServices.pickImageAndExtractText(context);
                       if (result != null) {
                         setState(() {
-                          selectedFileName = result['fileName'];
-                          extractedText = result['extractedText'];
+                          _selectedInputSource = 'image';
+                          _textController.text = result['extractedText']!;
                         });
                       }
                     },
@@ -456,31 +478,36 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             SizedBox(height: 8),
-            if (selectedFileName != null) ...[
-              SizedBox(height: 8),
+            if (_selectedInputSource != null)
               Container(
                 padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 16),
-                    SizedBox(width: 4),
+                    Icon(Icons.check_circle, color: Colors.green),
+                    SizedBox(width: 8),
                     Text(
-                      'Text extracted successfully!',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
+                      _selectedInputSource == 'text'
+                          ? 'Using manual input'
+                          : 'Using ${_selectedInputSource!.toUpperCase()} file: ${selectedFileName ?? ''}',
                     ),
                   ],
                 ),
               ),
-            ],
           ],
         ),
       ),
     );
   }
+
+  void _clearInputs() {
+    setState(() {
+      _selectedInputSource = null;
+      selectedFileName = null;
+      _textController.clear();
+    });
+  }
+
+// Use this when switching between input methods
 
   Widget _buildUploadButton(
       IconData icon, String label, VoidCallback onPressed, Color color) {
@@ -532,7 +559,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.symmetric(vertical: 18), // Adjust height
                   elevation: 4,
                 ),
-                onPressed: () {},
+                onPressed: () async {
+                  if (_textController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Please input some text')),
+                    );
+                    return;
+                  }
+                  // Save to Firebase
+                  final textData = TextDataModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    userId: user?.uid ?? '',
+                    extractedText: _textController.text,
+                    timestamp: DateTime.now(),
+                    sourceType: _selectedInputSource ?? 'text',
+                  );
+
+                  await FirestoreService().saveExtractedText(textData);
+
+                  // Navigate to quiz generation screen
+                  context.push('/generate-quiz', extra: _textController.text);
+                },
                 child: Text("Generate Quiz",
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -582,6 +629,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: TextField(
+                controller: _textController,
                 decoration: InputDecoration(
                   hintText: "Type something...",
                   border: OutlineInputBorder(
@@ -589,6 +637,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderSide: BorderSide.none),
                   contentPadding: EdgeInsets.all(12),
                 ),
+                onChanged: (value) {
+                  if (value.isNotEmpty) {
+                    setState(() => _selectedInputSource = 'text');
+                  }
+                },
                 maxLines: null, // Allows multiline input
                 keyboardType: TextInputType.multiline,
               ),
