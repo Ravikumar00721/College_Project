@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:quiz_craft_ai/views/quiz/quiz_screen.dart';
 
 // Import Screens
-import '../models/quizmodel.dart';
 import '../views/auth/login_screen.dart';
 import '../views/auth/signup_screen.dart';
 import '../views/history/history_screen.dart';
@@ -13,14 +12,6 @@ import '../views/profile/profile_screen.dart';
 import '../views/splash/splash_screen.dart';
 import '../views/tutorial/tutorial_screen.dart';
 
-final quiz = QuizModel(
-  id: '1',
-  question: 'What is the capital of France?',
-  options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
-  correctOptionIndex: 2,
-  explanation: 'Paris is the capital of France.',
-);
-
 final GoRouter router = GoRouter(
   initialLocation: "/", // Start with Splash Screen
   routes: [
@@ -28,22 +19,30 @@ final GoRouter router = GoRouter(
     GoRoute(
         path: "/tutorial", builder: (context, state) => WalkthroughScreen()),
     GoRoute(path: "/login", builder: (context, state) => LoginInPage()),
-    GoRoute(path: "/signup", builder: (context, state) => SignUpPage()),
+    GoRoute(path: "/signup", builder: (context, state) => const SignUpPage()),
     GoRoute(path: "/home", builder: (context, state) => HomeScreen()),
-    GoRoute(path: "/myprofile", builder: (context, state) => MyProfileScreen()),
+    GoRoute(
+        path: "/myprofile",
+        builder: (context, state) => const MyProfileScreen()),
     GoRoute(path: "/history", builder: (context, state) => HistoryScreen()),
     GoRoute(
-        path: "/generate-quiz",
-        builder: (context, state) => QuizScreen(quiz: quiz)),
+        path:
+            "/generate-quiz/:documentId", // Use a dynamic route parameter for documentId
+        builder: (context, state) {
+          final documentId = state
+              .pathParameters['documentId']!; // Extract documentId from route
+          return QuizScreen(
+              documentId: documentId); // Pass documentId to QuizScreen
+        }),
 
     // 🔹 Profile Edit Sheet as a Full Screen Page
     GoRoute(
       path: "/myprofileedit",
       builder: (context, state) => Scaffold(
         appBar: AppBar(
-          title: Text("Edit Profile"),
+          title: const Text("Edit Profile"),
           centerTitle: true,
-          leading: BackButton(),
+          leading: const BackButton(),
         ),
         body: ProfileEditSheet(onUpdate: () {}),
       ),

@@ -222,37 +222,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior
-              .onDrag, // Dismiss keyboard on scroll
+          physics:
+              BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: constraints.maxHeight, // Ensure it takes full height
+              minHeight: constraints.maxHeight,
             ),
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.blueAccent,
-                    Colors.purpleAccent
-                  ], // Gradient Background
+                  colors: [Colors.blueAccent, Colors.purpleAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
               ),
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: 100), // Add space
-                  _buildAIRecommendations(),
-                  SizedBox(height: 5),
-                  _buildProgressIndicator(),
-                  SizedBox(height: 20),
-                  _buildDailyChallenge(),
-                  SizedBox(height: 20),
+                  SizedBox(height: 100),
                   _buildUploadButtons(),
                   SizedBox(height: 20),
-                  _buildTextField(), // TextField now properly scrolls
+                  _buildTextField(),
+                  _buildInputSourceMessage(),
                   SizedBox(height: 20),
                   _buildGenerateQuizButton(),
                 ],
@@ -264,162 +262,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildAIRecommendations() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [Colors.blueAccent, Colors.purpleAccent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(Icons.auto_awesome, color: Colors.white, size: 28),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                "🔥 Recommended Topic: Math",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgressIndicator() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.infinity, // Full width inside card
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              Colors.blueAccent,
-              Colors.purpleAccent
-            ], // Matching `_buildAIRecommendations`
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              "📌 Progress",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: 8),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: 0.3), // 30% progress
-              duration: Duration(seconds: 1),
-              builder: (context, value, child) {
-                return Stack(
-                  children: [
-                    Container(
-                      height: 20,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white.withOpacity(
-                            0.3), // Transparent white for visibility
-                      ),
+  Widget _buildInputSourceMessage() {
+    return AnimatedSwitcher(
+      duration: Duration(milliseconds: 300),
+      child: _selectedInputSource != null
+          ? Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    _selectedInputSource == 'text'
+                        ? 'Using manual input'
+                        : 'Using ${_selectedInputSource!.toUpperCase()} file${selectedFileName != null ? ': $selectedFileName' : ''}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
                     ),
-                    Container(
-                      height: 20,
-                      width: MediaQuery.of(context).size.width *
-                          0.8 *
-                          value, // 80% of screen width
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color:
-                            Colors.white, // White progress bar inside gradient
-                      ),
-                    ),
-                    Positioned(
-                      right: 8, // Aligns to the right inside the progress bar
-                      top: 2,
-                      child: Text(
-                        "30%",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDailyChallenge() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              Colors.orangeAccent,
-              Colors.redAccent
-            ], // Eye-catching colors
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                "🎯 Daily Challenge: Science Quiz",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                  ),
+                ],
               ),
-            ),
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child:
-                  Text("Start", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
+            )
+          : SizedBox.shrink(),
     );
   }
 
@@ -477,22 +344,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ],
             ),
-            SizedBox(height: 8),
-            if (_selectedInputSource != null)
-              Container(
-                padding: EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text(
-                      _selectedInputSource == 'text'
-                          ? 'Using manual input'
-                          : 'Using ${_selectedInputSource!.toUpperCase()} file: ${selectedFileName ?? ''}',
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -578,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   await FirestoreService().saveExtractedText(textData);
 
                   // Navigate to quiz generation screen
-                  context.push('/generate-quiz', extra: _textController.text);
+                  context.push('/generate-quiz');
                 },
                 child: Text("Generate Quiz",
                     style:
@@ -599,10 +450,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [
-              Colors.purpleAccent,
-              Colors.blueAccent
-            ], // Eye-catching gradient
+            colors: [Colors.purpleAccent, Colors.blueAccent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -614,15 +462,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               "📝 Enter Text",
               style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             SizedBox(height: 8),
             Container(
-              height: 160, // Set height to 200px
+              height: 200,
               decoration: BoxDecoration(
-                color: Colors.white, // White background inside gradient card
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(color: Colors.black26, blurRadius: 4),
@@ -631,18 +480,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: TextField(
                 controller: _textController,
                 decoration: InputDecoration(
-                  hintText: "Type something...",
+                  hintText: "Type or paste your content here...",
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                   contentPadding: EdgeInsets.all(12),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
                 onChanged: (value) {
                   if (value.isNotEmpty) {
                     setState(() => _selectedInputSource = 'text');
+                  } else {
+                    setState(() => _selectedInputSource = null);
                   }
                 },
-                maxLines: null, // Allows multiline input
+                maxLines: null,
                 keyboardType: TextInputType.multiline,
               ),
             ),
