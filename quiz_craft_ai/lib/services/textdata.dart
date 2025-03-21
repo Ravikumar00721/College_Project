@@ -11,19 +11,24 @@ class FirestoreService {
   CollectionReference get textDataCollection =>
       _firestore.collection('textData');
 
-  /// 📌 Save extracted text to Firestore
-  Future<void> saveExtractedText(TextDataModel textData) async {
+  /// 📌 Save extracted text to Firestore and return the document ID
+  Future<String?> saveExtractedText(TextDataModel textData) async {
     try {
       if (user == null) throw Exception('User not authenticated');
 
-      await textDataCollection.doc(textData.id).set({
+      // Use .add() to create a new document with an auto-generated ID
+      final docRef = await textDataCollection.add({
         'userId': user!.uid,
         'extractedText': textData.extractedText,
         'timestamp': textData.timestamp,
+        'sourceType': textData.sourceType,
       });
+
+      // Return the auto-generated document ID
+      return docRef.id;
     } catch (e) {
       print('🔥 Firestore save error: $e');
-      rethrow;
+      return null; // Return null if there's an error
     }
   }
 

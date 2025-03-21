@@ -29,8 +29,8 @@ final GoRouter router = GoRouter(
         path:
             "/generate-quiz/:documentId", // Use a dynamic route parameter for documentId
         builder: (context, state) {
-          final documentId = state
-              .pathParameters['documentId']!; // Extract documentId from route
+          final documentId = state.pathParameters['documentId']!;
+          print("Document ID is : $documentId");
           return QuizScreen(
               documentId: documentId); // Pass documentId to QuizScreen
         }),

@@ -1,3 +1,4 @@
+// quiz_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiz_craft_ai/views/quiz/quiz_view.dart';
@@ -29,7 +30,7 @@ class QuizScreen extends ConsumerWidget {
         ),
       ),
       body: quizAsyncValue.when(
-        data: (quiz) => QuizView(quiz: quiz),
+        data: (quizzes) => QuizView(quizzes: quizzes),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),

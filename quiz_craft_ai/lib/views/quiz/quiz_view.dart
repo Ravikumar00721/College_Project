@@ -3,17 +3,21 @@ import 'package:flutter/material.dart';
 import '../../models/quizmodel.dart';
 
 class QuizView extends StatefulWidget {
-  final QuizModel quiz;
+  final List<QuizModel> quizzes;
 
-  const QuizView({Key? key, required this.quiz}) : super(key: key);
+  const QuizView({Key? key, required this.quizzes}) : super(key: key);
 
   @override
   _QuizViewState createState() => _QuizViewState();
 }
 
 class _QuizViewState extends State<QuizView> {
+  int _currentQuestionIndex = 0;
   int? _selectedOptionIndex;
   bool _isAnswerSubmitted = false;
+
+  QuizModel get currentQuiz => widget.quizzes[_currentQuestionIndex];
+  bool get hasNextQuestion => _currentQuestionIndex < widget.quizzes.length - 1;
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +26,10 @@ class _QuizViewState extends State<QuizView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildQuestionCount(),
           _buildQuestionCard(),
           const SizedBox(height: 24),
-          ...widget.quiz.options.asMap().entries.map((entry) {
+          ...currentQuiz.options.asMap().entries.map((entry) {
             final index = entry.key;
             final option = entry.value;
             return _buildOptionButton(index, option);
@@ -37,6 +42,20 @@ class _QuizViewState extends State<QuizView> {
     );
   }
 
+  Widget _buildQuestionCount() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Text(
+        'Question ${_currentQuestionIndex + 1} of ${widget.quizzes.length}',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuestionCard() {
     return Card(
       elevation: 4,
@@ -44,7 +63,7 @@ class _QuizViewState extends State<QuizView> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(
-          widget.quiz.question,
+          currentQuiz.question,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
@@ -67,12 +86,12 @@ class _QuizViewState extends State<QuizView> {
   Widget _buildSubmitButton() {
     return ElevatedButton(
       onPressed: _selectedOptionIndex != null ? _submitAnswer : null,
-      child: const Text('Submit Answer'),
+      child: Text(_isAnswerSubmitted ? 'Continue' : 'Submit Answer'),
     );
   }
 
   Widget _buildResultSection() {
-    final isCorrect = _selectedOptionIndex == widget.quiz.correctOptionIndex;
+    final isCorrect = _selectedOptionIndex == currentQuiz.correctOptionIndex;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -94,7 +113,21 @@ class _QuizViewState extends State<QuizView> {
             ),
           ),
           const SizedBox(height: 10),
-          if (widget.quiz.explanation != null) Text(widget.quiz.explanation!),
+          if (currentQuiz.explanation != null) Text(currentQuiz.explanation!),
+          const SizedBox(height: 20),
+          if (hasNextQuestion)
+            ElevatedButton(
+              onPressed: _goToNextQuestion,
+              child: const Text('Next Question'),
+            )
+          else
+            ElevatedButton(
+              onPressed: () {
+                // Handle quiz completion
+                Navigator.pop(context);
+              },
+              child: const Text('Finish Quiz'),
+            ),
         ],
       ),
     );
@@ -102,5 +135,13 @@ class _QuizViewState extends State<QuizView> {
 
   void _submitAnswer() {
     setState(() => _isAnswerSubmitted = true);
+  }
+
+  void _goToNextQuestion() {
+    setState(() {
+      _currentQuestionIndex++;
+      _selectedOptionIndex = null;
+      _isAnswerSubmitted = false;
+    });
   }
 }

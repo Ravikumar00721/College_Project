@@ -392,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [Colors.blueAccent, Colors.greenAccent], // Modern gradient
+            colors: [Colors.blueAccent, Colors.greenAccent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -403,11 +403,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, // White button inside gradient
-                  foregroundColor: Colors.greenAccent, // Text color
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.greenAccent,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
-                  padding: EdgeInsets.symmetric(vertical: 18), // Adjust height
+                  padding: EdgeInsets.symmetric(vertical: 18),
                   elevation: 4,
                 ),
                 onPressed: () async {
@@ -417,7 +417,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     );
                     return;
                   }
-                  // Save to Firebase
+
+                  // Save to Firebase and get the document ID
                   final textData = TextDataModel(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     userId: user?.uid ?? '',
@@ -426,10 +427,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     sourceType: _selectedInputSource ?? 'text',
                   );
 
-                  await FirestoreService().saveExtractedText(textData);
+                  // Save the text data and get the document ID
+                  final documentId =
+                      await FirestoreService().saveExtractedText(textData);
 
-                  // Navigate to quiz generation screen
-                  context.push('/generate-quiz');
+                  // Navigate to quiz generation screen with the document ID
+                  if (documentId != null) {
+                    context.push('/generate-quiz/$documentId');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to save text data')),
+                    );
+                  }
                 },
                 child: Text("Generate Quiz",
                     style:
