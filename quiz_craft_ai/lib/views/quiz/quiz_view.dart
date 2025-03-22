@@ -21,23 +21,27 @@ class _QuizViewState extends State<QuizView> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildQuestionCount(),
-          _buildQuestionCard(),
-          const SizedBox(height: 24),
-          ...currentQuiz.options.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-            return _buildOptionButton(index, option);
-          }).toList(),
-          const SizedBox(height: 32),
-          _buildSubmitButton(),
-          if (_isAnswerSubmitted) _buildResultSection(),
-        ],
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildQuestionCount(),
+            _buildQuestionCard(),
+            const SizedBox(height: 24),
+            Expanded(
+              child: ListView.separated(
+                itemCount: currentQuiz.options.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) => _buildOptionButton(index),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildControlButton(),
+            if (_isAnswerSubmitted) _buildResultSection(),
+          ],
+        ),
       ),
     );
   }
@@ -47,10 +51,10 @@ class _QuizViewState extends State<QuizView> {
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Text(
         'Question ${_currentQuestionIndex + 1} of ${widget.quizzes.length}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Colors.grey,
+          color: Colors.grey.shade600,
         ),
       ),
     );
@@ -60,75 +64,141 @@ class _QuizViewState extends State<QuizView> {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      color: Colors.blue.shade50,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(
           currentQuiz.question,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueGrey,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildOptionButton(int index, String option) {
-    return RadioListTile<int>(
-      title: Text(option),
-      value: index,
-      groupValue: _selectedOptionIndex,
-      onChanged: _isAnswerSubmitted
-          ? null
-          : (value) {
-              setState(() => _selectedOptionIndex = value);
-            },
+  Widget _buildOptionButton(int index) {
+    final option = currentQuiz.options[index];
+    final isCorrect = index == currentQuiz.correctOptionIndex;
+    final isSelected = index == _selectedOptionIndex;
+    final showAnswer = _isAnswerSubmitted;
+
+    return InkWell(
+      onTap: !_isAnswerSubmitted
+          ? () => setState(() => _selectedOptionIndex = index)
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: showAnswer
+              ? isCorrect
+                  ? Colors.green.shade100
+                  : isSelected
+                      ? Colors.red.shade100
+                      : null
+              : null,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Radio<int>(
+              value: index,
+              groupValue: _selectedOptionIndex,
+              onChanged: !_isAnswerSubmitted
+                  ? (value) => setState(() => _selectedOptionIndex = value)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                option,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: showAnswer && isCorrect ? Colors.green.shade800 : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSubmitButton() {
-    return ElevatedButton(
-      onPressed: _selectedOptionIndex != null ? _submitAnswer : null,
-      child: Text(_isAnswerSubmitted ? 'Continue' : 'Submit Answer'),
+  Widget _buildControlButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        onPressed: () {
+          if (!_isAnswerSubmitted && _selectedOptionIndex != null) {
+            _submitAnswer();
+          } else if (_isAnswerSubmitted && hasNextQuestion) {
+            _goToNextQuestion();
+          } else if (_isAnswerSubmitted && !hasNextQuestion) {
+            _finishQuiz();
+          }
+        },
+        child: Text(
+          !_isAnswerSubmitted
+              ? 'Submit Answer'
+              : hasNextQuestion
+                  ? 'Next Question'
+                  : 'Finish Quiz',
+          style: const TextStyle(fontSize: 16),
+        ),
+      ),
     );
   }
 
   Widget _buildResultSection() {
     final isCorrect = _selectedOptionIndex == currentQuiz.correctOptionIndex;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isCorrect ? Colors.green.shade50 : Colors.red.shade50,
-        border: Border.all(color: isCorrect ? Colors.green : Colors.red),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(isCorrect ? Icons.check_circle : Icons.cancel,
-              color: isCorrect ? Colors.green : Colors.red),
-          const SizedBox(height: 10),
-          Text(
-            isCorrect ? 'Correct Answer!' : 'Incorrect Answer',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isCorrect ? Icons.check_circle : Icons.cancel,
               color: isCorrect ? Colors.green : Colors.red,
+              size: 48,
             ),
-          ),
-          const SizedBox(height: 10),
-          if (currentQuiz.explanation != null) Text(currentQuiz.explanation!),
-          const SizedBox(height: 20),
-          if (hasNextQuestion)
-            ElevatedButton(
-              onPressed: _goToNextQuestion,
-              child: const Text('Next Question'),
-            )
-          else
-            ElevatedButton(
-              onPressed: () {
-                // Handle quiz completion
-                Navigator.pop(context);
-              },
-              child: const Text('Finish Quiz'),
+            const SizedBox(height: 16),
+            Text(
+              isCorrect ? 'Correct Answer!' : 'Incorrect Answer',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isCorrect ? Colors.green : Colors.red,
+              ),
             ),
-        ],
+            const SizedBox(height: 12),
+            if (currentQuiz.explanation != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  currentQuiz.explanation!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -143,5 +213,35 @@ class _QuizViewState extends State<QuizView> {
       _selectedOptionIndex = null;
       _isAnswerSubmitted = false;
     });
+  }
+
+  void _finishQuiz() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultScreen(quizzes: widget.quizzes),
+      ),
+    );
+  }
+}
+
+class ResultScreen extends StatelessWidget {
+  final List<QuizModel> quizzes;
+
+  const ResultScreen({Key? key, required this.quizzes}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Quiz Results')),
+      body: Center(
+        child: Text('Quiz Completed! Score: ${calculateScore()}'),
+      ),
+    );
+  }
+
+  int calculateScore() {
+    // Add your scoring logic here
+    return 0;
   }
 }

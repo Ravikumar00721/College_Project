@@ -20,34 +20,67 @@ class ApiService {
       final extractedText = await _fetchTextFromFirestore(documentId);
       final wordCount = _countWords(extractedText);
       final quizCount = _calculateQuizCount(wordCount);
+      final sanitizedText = _sanitizeInputText(extractedText);
 
-      final response = await _sendToHuggingFace('''
-Generate $quizCount multiple-choice quizzes about this text.
-Return ONLY valid JSON following EXACTLY this structure:
-[
-  {
-    "question": "Question text (escaped quotes)",
-    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-    "correctOptionIndex": 0,
-    "explanation": "Explanation text"
-  }
-]
-Important:
-- Use double quotes ONLY
-- Escape special characters with \\
-- No markdown or extra text
-- Maintain valid JSON syntax
+      print("Word Count: $wordCount | QuizCount: $quizCount");
+      print("Sanitized Text Length: ${sanitizedText.length}");
 
-Text to analyze ($wordCount words):
-${extractedText.replaceAll('"', '\\"')}
-''');
+      // Build prompt using our builder function.
+      final prompt = _buildPrompt(quizCount, sanitizedText);
+      print("Built Prompt:\n$prompt");
 
-      // Now returns List<QuizModel>
+      final response = await _sendToHuggingFace(prompt);
       return _parseResponse(response);
     } catch (e) {
       print('Error in fetchProcessedText: $e');
       rethrow;
     }
+  }
+
+  String _buildPrompt(int quizCount, String text) {
+    return '''
+Generate EXACTLY $quizCount questions. Use this EXACT format:
+
+\`\`\`json
+{
+  "quizzes": [
+    {
+      "question": "What is deep learning?",
+      "options": ["A...", "B...", "C...", "D..."],
+      "correct": 0,
+      "explanation": "Deep learning uses neural networks to learn complex patterns."
+    }
+    // ... exactly $quizCount objects in total
+  ]
+}
+\`\`\`
+
+Text (truncated to 1000 characters):
+${_truncateText(text, 1000)}
+
+Rules:
+1. Use the "correct" field for the answer index (0-3).
+2. Generate $quizCount distinct questions based on key concepts in the text.
+3. Each question must have exactly 4 answer choices.
+4. Every question MUST include a non-empty explanation that clearly justifies why the answer is right or wrong.
+5. The output MUST be valid JSON containing ONLY the JSON structure as shown (no extra text).
+6. Use double quotes for JSON syntax and escape special characters properly.
+''';
+  }
+
+  String _truncateText(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    // Truncate to the last space before maxLength to avoid cutting a word
+    final index = text.lastIndexOf(' ', maxLength);
+    return text.substring(0, index) + '...';
+  }
+
+  String _sanitizeInputText(String text) {
+    return text
+        .replaceAll(RegExp(r'\s+'),
+            ' ') // Replace multiple whitespaces with single space
+        .replaceAll(RegExp(r'[^\x00-\x7F]'), '') // Remove non-ASCII characters
+        .trim();
   }
 
   int _countWords(String text) {
@@ -56,12 +89,11 @@ ${extractedText.replaceAll('"', '\\"')}
   }
 
   int _calculateQuizCount(int wordCount) {
-    // Adjust these values as needed
     const minQuestions = 1;
-    const maxQuestions = 10;
+    const maxQuestions = 15;
     const wordsPerQuestion = 50;
-
     final calculated = (wordCount / wordsPerQuestion).ceil();
+    print('Word Count: $wordCount | Calculated: $calculated');
     return calculated.clamp(minQuestions, maxQuestions);
   }
 
@@ -82,29 +114,29 @@ ${extractedText.replaceAll('"', '\\"')}
         body: jsonEncode({
           'inputs': inputText,
           'parameters': {
-            'max_new_tokens': 500,
+            'max_new_tokens': 3500, // Adjust token limit if needed
             'wait_for_model': true,
+            'truncation': 'only_first', // Truncate input, not output
+            'return_full_text': false,
+            'max_length': 4096,
           }
         }),
       );
 
-      print('API Raw Response: ${response.body}'); // Add raw response logging
+      print('API Raw Response: ${response.body}');
 
       if (response.statusCode == 403) {
         throw Exception('Access denied - Check API key and model permissions');
       }
-
       if (response.statusCode == 503) {
         final estimated = jsonDecode(response.body)['estimated_time'] ?? 20;
         await Future.delayed(Duration(seconds: estimated));
         return _sendToHuggingFace(inputText);
       }
-
       if (response.statusCode != 200) {
         throw Exception('API Error ${response.statusCode}: ${response.body}');
       }
 
-      // Handle different response formats
       final dynamic jsonResponse = jsonDecode(response.body);
       if (jsonResponse is List) {
         return jsonResponse.first as Map<String, dynamic>;
@@ -119,27 +151,23 @@ ${extractedText.replaceAll('"', '\\"')}
   List<QuizModel> _parseResponse(Map<String, dynamic> response) {
     try {
       final generated = response['generated_text'] as String;
-      print('Raw Generated Text:\n$generated');
-
-      final jsonString = _extractJson(generated);
-      print('Extracted JSON:\n$jsonString');
-
-      if (jsonString.isEmpty)
-        throw FormatException('No JSON found in response');
+      // Extract and complete JSON from the raw generated text.
+      final jsonString = _completeJson(_extractJson(generated));
+      print('Sanitized JSON:\n$jsonString');
 
       final parsed = jsonDecode(jsonString);
-      print('Parsed JSON Type: ${parsed.runtimeType}');
 
+      if (parsed is Map && parsed.containsKey('quizzes')) {
+        return (parsed['quizzes'] as List)
+            .map((item) => _parseQuizItem(item))
+            .toList();
+      }
       if (parsed is List) {
         return parsed.map((item) => _parseQuizItem(item)).toList();
       }
-      if (parsed is Map<String, dynamic>) {
-        return [_parseQuizItem(parsed)];
-      }
-
-      throw FormatException('Unexpected JSON format');
-    } catch (e) {
-      print('Parsing Error: $e');
+      throw FormatException('Unexpected JSON structure');
+    } catch (e, stack) {
+      print('Full Parsing Error: $e\n$stack');
       rethrow;
     }
   }
@@ -152,8 +180,8 @@ ${extractedText.replaceAll('"', '\\"')}
         question: _cleanString(map['question'] ?? ''),
         options: List<String>.from(
           (map['options'] as List<dynamic>).map((e) => _cleanString(e)),
-        ), // Added missing closing parenthesis
-        correctOptionIndex: _parseCorrectIndex(map['correctOptionIndex']),
+        ),
+        correctOptionIndex: _parseCorrectIndex(map['correct']),
         explanation: _cleanString(map['explanation']),
       );
     } catch (e) {
@@ -169,28 +197,25 @@ ${extractedText.replaceAll('"', '\\"')}
   }
 
   String _extractJson(String text) {
-    // Simplified regex without recursive patterns
-    final jsonRegex = RegExp(
-      r'(\{[^{}]*\})|(\[[^\[\]]*\])',
+    // First, try to find the JSON object containing "quizzes"
+    final quizzesRegex = RegExp(
+      r'\{\s*"quizzes"\s*:\s*\[.*?\]\s*\}',
       dotAll: true,
-      multiLine: true,
+      caseSensitive: false,
     );
-
-    // Find all potential JSON matches
-    final matches = jsonRegex.allMatches(text);
-
-    if (matches.isNotEmpty) {
-      // Select the longest match
-      var bestMatch = matches.first;
-      for (final match in matches) {
-        if ((match.end - match.start) > (bestMatch.end - bestMatch.start)) {
-          bestMatch = match;
-        }
-      }
-      return text.substring(bestMatch.start, bestMatch.end);
+    final quizzesMatch = quizzesRegex.firstMatch(text);
+    if (quizzesMatch != null) {
+      return text.substring(quizzesMatch.start, quizzesMatch.end);
     }
 
-    // Fallback to bracket counting method
+    // Fallback: try to find any JSON array
+    final arrayRegex = RegExp(r'\[.*?\]', dotAll: true);
+    final arrayMatch = arrayRegex.firstMatch(text);
+    if (arrayMatch != null) {
+      return text.substring(arrayMatch.start, arrayMatch.end);
+    }
+
+    // Final fallback using bracket counting
     return _findJsonByBracketCounting(text);
   }
 
@@ -209,45 +234,41 @@ ${extractedText.replaceAll('"', '\\"')}
       } else if (chars[i] == '}' || chars[i] == ']') {
         if (chars[i] == '}') braceCount--;
         if (chars[i] == ']') bracketCount--;
-
         if (braceCount == 0 && bracketCount == 0 && startIndex != -1) {
           endIndex = i;
           break;
         }
       }
     }
-
     if (startIndex != -1 && endIndex != -1) {
       return text.substring(startIndex, endIndex + 1);
     }
-
     return '';
   }
 
   String _completeJson(String json) {
-    try {
-      jsonDecode(json);
-      return json;
-    } catch (e) {
-      // Attempt to fix common issues
-      final fixedJson = json
-          .replaceAll(RegExp(r',\s*]'), ']') // Remove trailing commas
-          .replaceAll(RegExp(r',\s*}'), '}') // Remove trailing commas
-          .replaceAll(RegExp(r'\\"'), '"') // Fix escaped quotes
-          .replaceAll(RegExp(r'“|”'), '"'); // Replace smart quotes
+    // Attempt to balance brackets and braces.
+    final openBraces = json.split('{').length - 1;
+    final closeBraces = json.split('}').length - 1;
+    final openBrackets = json.split('[').length - 1;
+    final closeBrackets = json.split(']').length - 1;
 
-      // Add missing closing brackets
-      final openBraces = fixedJson.split('{').length - 1;
-      final closeBraces = fixedJson.split('}').length - 1;
-      final openBrackets = fixedJson.split('[').length - 1;
-      final closeBrackets = fixedJson.split(']').length - 1;
+    String completed = json;
 
-      var completedJson = fixedJson;
-      if (openBraces > closeBraces) completedJson += '}';
-      if (openBrackets > closeBrackets) completedJson += ']';
-
-      return completedJson;
+    if (openBraces > closeBraces) {
+      completed += '}' * (openBraces - closeBraces);
+    } else if (closeBraces > openBraces) {
+      completed = completed.substring(0, completed.lastIndexOf('}'));
     }
+    if (openBrackets > closeBrackets) {
+      completed += ']' * (openBrackets - closeBrackets);
+    } else if (closeBrackets > openBrackets) {
+      completed = completed.substring(0, completed.lastIndexOf(']'));
+    }
+
+    // Cleanup trailing commas before a closing bracket or brace.
+    completed = completed.replaceAll(RegExp(r',(\s*[}\]])'), r'$1');
+    return completed.replaceAll(RegExp(r'[\r\n]+'), ' ');
   }
 
   String _cleanString(dynamic input) {
