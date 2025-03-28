@@ -1,14 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class QuizModel {
-  final String id;
+  final String? id;
   final String question;
   final List<String> options;
   final int correctOptionIndex;
   final String? explanation;
 
   QuizModel({
-    required this.id,
+    this.id,
     required this.question,
     required this.options,
     required this.correctOptionIndex,
@@ -40,6 +40,25 @@ class QuizModel {
   // Convert Firebase document snapshot to QuizModel
   factory QuizModel.fromDocument(DocumentSnapshot doc) {
     return QuizModel.fromJson(doc.data() as Map<String, dynamic>);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'question': question,
+      'options': options,
+      'correctOptionIndex': correctOptionIndex,
+      'explanation': explanation ?? '',
+    };
+  }
+
+  // Add fromMap constructor
+  factory QuizModel.fromMap(Map<String, dynamic> map) {
+    return QuizModel(
+      question: map['question'] as String,
+      options: List<String>.from(map['options'] as List),
+      correctOptionIndex: map['correctOptionIndex'] as int,
+      explanation: map['explanation'] as String?,
+    );
   }
 }
 

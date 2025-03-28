@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../models/quiz_result.dart';
+import '../models/quizmodel.dart';
 import '../models/usermodel.dart';
 
 class AuthService {
@@ -128,5 +130,55 @@ class AuthService {
       return ProfileModel.fromMap(doc.data() as Map<String, dynamic>);
     }
     return null;
+  }
+
+  // Add to AuthService
+  Future<void> saveQuizResult({
+    required List<QuizModel> quizzes,
+    required int correctAnswers,
+    required List<int?> userAnswers,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final totalQuestions = quizzes.length;
+      final score = (correctAnswers / totalQuestions * 100).round();
+
+      await _firestore.collection('quizResults').add({
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+        'correctAnswers': correctAnswers,
+        'incorrectAnswers': totalQuestions - correctAnswers,
+        'totalQuestions': totalQuestions,
+        'score': score,
+        'quizzes': quizzes.map((q) => q.toMap()).toList(),
+        'userAnswers': userAnswers,
+      });
+      print("Quiz results saved successfully");
+    } catch (e) {
+      print("Error saving quiz results: $e");
+    }
+  }
+
+  // In AuthService
+  Future<List<QuizResult>> getQuizResults() async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final querySnapshot = await _firestore
+          .collection('quizResults')
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        return QuizResult.fromFirestore(doc);
+      }).toList();
+    } catch (e) {
+      print("Error fetching quiz results: $e");
+      return [];
+    }
   }
 }

@@ -201,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               style: TextStyle(color: AppColors.textPrimary),
             ),
             onTap: () {
-              context.go("");
+              context.go("/history");
             },
           ),
           ListTile(

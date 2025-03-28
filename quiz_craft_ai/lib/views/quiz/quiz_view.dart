@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:quiz_craft_ai/views/quiz/result_screen.dart';
 
 import '../../models/quizmodel.dart';
+import '../../services/auth_services.dart';
 
 class QuizView extends StatefulWidget {
   final List<QuizModel> quizzes;
@@ -204,6 +206,7 @@ class _QuizViewState extends State<QuizView> {
   }
 
   void _submitAnswer() {
+    _userAnswers[_currentQuestionIndex] = _selectedOptionIndex!;
     setState(() => _isAnswerSubmitted = true);
   }
 
@@ -215,33 +218,31 @@ class _QuizViewState extends State<QuizView> {
     });
   }
 
+  // Add this to track answers
+  final Map<int, int> _userAnswers = {};
+
   void _finishQuiz() {
-    Navigator.pushReplacement(
-      context,
+    final correctAnswers = widget.quizzes
+        .where((quiz) =>
+            _userAnswers[widget.quizzes.indexOf(quiz)] ==
+            quiz.correctOptionIndex)
+        .length;
+
+    // Save results to Firestore
+    AuthService().saveQuizResult(
+      quizzes: widget.quizzes,
+      correctAnswers: correctAnswers,
+      userAnswers: _userAnswers.values.toList(),
+    );
+
+    Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ResultScreen(quizzes: widget.quizzes),
+        builder: (context) => ResultScreen(
+          quizzes: widget.quizzes,
+          correctAnswers: correctAnswers,
+          userAnswers: _userAnswers.values.toList(),
+        ),
       ),
     );
-  }
-}
-
-class ResultScreen extends StatelessWidget {
-  final List<QuizModel> quizzes;
-
-  const ResultScreen({Key? key, required this.quizzes}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Quiz Results')),
-      body: Center(
-        child: Text('Quiz Completed! Score: ${calculateScore()}'),
-      ),
-    );
-  }
-
-  int calculateScore() {
-    // Add your scoring logic here
-    return 0;
   }
 }
