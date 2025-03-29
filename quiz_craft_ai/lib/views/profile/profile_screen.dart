@@ -11,6 +11,7 @@ import 'package:quiz_craft_ai/core/themes.dart';
 import 'package:quiz_craft_ai/views/profile/profile_edit_sheet.dart';
 
 import '../../providers/user_provider.dart';
+import '../../widgets/bouncing.dart';
 
 class MyProfileScreen extends ConsumerStatefulWidget {
   const MyProfileScreen({super.key});
@@ -171,8 +172,13 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         ),
       ),
       body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator()) // 🔹 Show Loading Indicator
+          ? const Center(
+              child: BouncingDotsLoader(
+              color: Colors.blue, // Customize color
+              dotSize: 20, // Customize dot size
+              duration:
+                  Duration(milliseconds: 800), // Customize animation speed
+            )) // 🔹 Show Loading Indicator
           : Column(
               children: [
                 // 🔹 Fixed Header (Profile Section)
@@ -199,8 +205,14 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                           maxRadius: 50.0,
                           backgroundColor: AppColors.background,
                           child: _isLoading
-                              ? CircularProgressIndicator(
-                                  color: Colors.white) // Show progress
+                              ? const Center(
+                                  child: BouncingDotsLoader(
+                                  color: Colors.blue, // Customize color
+                                  dotSize: 20, // Customize dot size
+                                  duration: Duration(
+                                      milliseconds:
+                                          800), // Customize animation speed
+                                )) // Show progress
                               : (_profileImage != null)
                                   ? ClipOval(
                                       child: Image.file(

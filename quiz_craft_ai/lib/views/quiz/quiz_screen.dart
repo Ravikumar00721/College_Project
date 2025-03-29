@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiz_craft_ai/views/quiz/quiz_view.dart';
 
 import '../../providers/quiz_provider.dart';
+import '../../widgets/bouncing.dart';
 
 class QuizScreen extends ConsumerWidget {
   final String documentId;
@@ -31,7 +32,12 @@ class QuizScreen extends ConsumerWidget {
       ),
       body: quizAsyncValue.when(
         data: (quizzes) => QuizView(quizzes: quizzes),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(
+            child: BouncingDotsLoader(
+          color: Colors.blue, // Customize color
+          dotSize: 20, // Customize dot size
+          duration: Duration(milliseconds: 800), // Customize animation speed
+        )),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:quiz_craft_ai/views/quiz/result_screen.dart';
 
 import '../../models/quizmodel.dart';
 import '../../services/auth_services.dart';
+import '../../widgets/bouncing.dart';
 
 class QuizView extends StatefulWidget {
   final List<QuizModel> quizzes;
@@ -17,9 +18,43 @@ class _QuizViewState extends State<QuizView> {
   int _currentQuestionIndex = 0;
   int? _selectedOptionIndex;
   bool _isAnswerSubmitted = false;
+  bool _isLoading = false;
 
   QuizModel get currentQuiz => widget.quizzes[_currentQuestionIndex];
   bool get hasNextQuestion => _currentQuestionIndex < widget.quizzes.length - 1;
+  Future<void> _finishQuiz() async {
+    try {
+      setState(() => _isLoading = true);
+
+      final correctAnswers = widget.quizzes
+          .where((quiz) =>
+              _userAnswers[widget.quizzes.indexOf(quiz)] ==
+              quiz.correctOptionIndex)
+          .length;
+
+      await AuthService().saveQuizResult(
+        quizzes: widget.quizzes,
+        correctAnswers: correctAnswers,
+        userAnswers: _userAnswers.values.toList(),
+      );
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(
+            quizzes: widget.quizzes,
+            correctAnswers: correctAnswers,
+            userAnswers: _userAnswers.values.toList(),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting quiz: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,23 +177,31 @@ class _QuizViewState extends State<QuizView> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        onPressed: () {
-          if (!_isAnswerSubmitted && _selectedOptionIndex != null) {
-            _submitAnswer();
-          } else if (_isAnswerSubmitted && hasNextQuestion) {
-            _goToNextQuestion();
-          } else if (_isAnswerSubmitted && !hasNextQuestion) {
-            _finishQuiz();
-          }
-        },
-        child: Text(
-          !_isAnswerSubmitted
-              ? 'Submit Answer'
-              : hasNextQuestion
-                  ? 'Next Question'
-                  : 'Finish Quiz',
-          style: const TextStyle(fontSize: 16),
-        ),
+        onPressed: _isLoading
+            ? null
+            : () async {
+                if (!_isAnswerSubmitted && _selectedOptionIndex != null) {
+                  _submitAnswer();
+                } else if (_isAnswerSubmitted && hasNextQuestion) {
+                  _goToNextQuestion();
+                } else if (_isAnswerSubmitted && !hasNextQuestion) {
+                  await _finishQuiz();
+                }
+              },
+        child: _isLoading
+            ? const BouncingDotsLoader(
+                color: Colors.white,
+                dotSize: 12,
+                duration: Duration(milliseconds: 800),
+              )
+            : Text(
+                !_isAnswerSubmitted
+                    ? 'Submit Answer'
+                    : hasNextQuestion
+                        ? 'Next Question'
+                        : 'Finish Quiz',
+                style: const TextStyle(fontSize: 16),
+              ),
       ),
     );
   }
@@ -220,29 +263,4 @@ class _QuizViewState extends State<QuizView> {
 
   // Add this to track answers
   final Map<int, int> _userAnswers = {};
-
-  void _finishQuiz() {
-    final correctAnswers = widget.quizzes
-        .where((quiz) =>
-            _userAnswers[widget.quizzes.indexOf(quiz)] ==
-            quiz.correctOptionIndex)
-        .length;
-
-    // Save results to Firestore
-    AuthService().saveQuizResult(
-      quizzes: widget.quizzes,
-      correctAnswers: correctAnswers,
-      userAnswers: _userAnswers.values.toList(),
-    );
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ResultScreen(
-          quizzes: widget.quizzes,
-          correctAnswers: correctAnswers,
-          userAnswers: _userAnswers.values.toList(),
-        ),
-      ),
-    );
-  }
 }
