@@ -13,15 +13,19 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   double _opacity = 0.0;
+  double _scale = 0.8;
+  double _textScale = 0.95;
 
   @override
   void initState() {
     super.initState();
 
-    // Start fade-in effect
-    Timer(Duration(milliseconds: 500), () {
+    // Start animations
+    Timer(Duration(milliseconds: 300), () {
       setState(() {
         _opacity = 1.0;
+        _scale = 1.0;
+        _textScale = 1.0;
       });
     });
 
@@ -32,19 +36,9 @@ class _SplashScreenState extends State<SplashScreen> {
       final user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        if (seenTutorial) {
-          context.go('/home'); // ✅ User logged in & tutorial seen → Home
-        } else {
-          context.go(
-              '/tutorial'); // ✅ User logged in & tutorial NOT seen → Tutorial
-        }
+        context.go(seenTutorial ? '/home' : '/tutorial');
       } else {
-        if (seenTutorial) {
-          context.go('/login'); // ✅ User NOT logged in & tutorial seen → Login
-        } else {
-          context.go(
-              '/tutorial'); // ✅ User NOT logged in & tutorial NOT seen → Tutorial
-        }
+        context.go(seenTutorial ? '/login' : '/tutorial');
       }
     });
   }
@@ -53,46 +47,119 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Lottie Animation
-            Lottie.asset('assets/animations/splash.json', height: 300),
-            SizedBox(height: 20),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              Color(0xFFFFF3E0),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated Lottie with scaling
+              AnimatedScale(
+                scale: _scale,
+                duration: Duration(seconds: 1),
+                curve: Curves.elasticOut,
+                child: Lottie.asset(
+                  'assets/animations/splash.json',
+                  height: 300,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              SizedBox(height: 30),
 
-            // Stylish Fade-in Text
-            AnimatedOpacity(
-              duration: Duration(seconds: 2),
-              opacity: _opacity,
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [
-                    Color.fromRGBO(255, 104, 11, 1.0), // Orange
-                    Color.fromRGBO(255, 167, 38, 1.0), // Lighter orange
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ).createShader(bounds),
-                child: Text(
-                  "QuizCraft AI",
-                  style: TextStyle(
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: 2,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10,
-                        color: Colors.black.withOpacity(0.2),
-                        offset: Offset(2, 4),
+              // Main title with multiple effects
+              AnimatedOpacity(
+                duration: Duration(seconds: 1),
+                opacity: _opacity,
+                child: AnimatedScale(
+                  scale: _textScale,
+                  duration: Duration(seconds: 1),
+                  curve: Curves.easeOutBack,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Text shadow for depth
+                      Text(
+                        "QuizCraft AI",
+                        style: TextStyle(
+                          fontSize: 52,
+                          fontWeight: FontWeight.w900,
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth = 6
+                            ..color = Colors.black.withOpacity(0.1),
+                        ),
+                      ),
+                      // Gradient text
+                      ShaderMask(
+                        shaderCallback: (bounds) => RadialGradient(
+                          center: Alignment.topLeft,
+                          radius: 1.5,
+                          colors: [
+                            Color(0xFFFF7043), // Deep orange
+                            Color(0xFFFFA726), // Amber
+                            Color(0xFFFFCA28), // Yellow
+                          ],
+                          tileMode: TileMode.mirror,
+                        ).createShader(bounds),
+                        child: Text(
+                          "QuizCraft AI",
+                          style: TextStyle(
+                            fontSize: 50,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            height: 1.2,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-          ],
+              SizedBox(height: 20),
+
+              // Subtitle with fade-in
+              AnimatedOpacity(
+                opacity: _opacity,
+                duration: Duration(milliseconds: 1500),
+                child: Text(
+                  "Transform Learning with AI",
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              SizedBox(height: 40),
+
+              // Loading indicator with color transition
+              AnimatedOpacity(
+                opacity: _opacity,
+                duration: Duration(milliseconds: 1000),
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 6,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFFFFA726),
+                    ),
+                    backgroundColor: Colors.grey[200],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

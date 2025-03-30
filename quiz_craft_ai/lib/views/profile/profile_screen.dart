@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:quiz_craft_ai/core/themes.dart';
 import 'package:quiz_craft_ai/views/profile/profile_edit_sheet.dart';
 
+import '../../providers/theme_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../widgets/bouncing.dart';
 
@@ -24,7 +25,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   File? _profileImage;
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
-  String _defaultPlaceholder = 'assets/image/buisness.svg'; // Placeholder image
+  String _defaultPlaceholder = 'assets/image/buisness.svg';
 
   @override
   void initState() {
@@ -32,7 +33,6 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     _fetchUserProfile();
   }
 
-  // ✅ Fetch User Data from Firestore
   Future<void> _fetchUserProfile() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -54,7 +54,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         });
       }
     } catch (e) {
-      print("🔥 Error fetching profile: $e");
+      print("Error fetching profile: $e");
       setState(() {
         _isLoading = false;
       });
@@ -73,52 +73,58 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         File file = File(image.path);
 
         setState(() {
-          _isLoading = true; // Show loading indicator while uploading
+          _isLoading = true;
         });
 
-        // ✅ Now this correctly retrieves the new image URL
         String? newImageUrl =
             await ref.read(profileProvider.notifier).uploadProfileImage(file);
 
         if (newImageUrl != null) {
-          print("✅ Image uploaded successfully: $newImageUrl");
-
           setState(() {
             _userData?['profileImagePath'] = newImageUrl;
-            _profileImage = file; // Show the selected image immediately
+            _profileImage = file;
             _isLoading = false;
           });
         } else {
-          print("❌ Error: Failed to upload image.");
           setState(() {
             _isLoading = false;
           });
         }
       }
     } catch (e) {
-      print("🔥 Error picking image: $e");
+      print("Error picking image: $e");
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-  // ✅ Dialog to choose between Camera and Gallery
   Future<ImageSource?> _showImageSourceDialog() async {
     return showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Choose Image Source"),
+        title: Text("Choose Image Source",
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            )),
+        backgroundColor: Theme.of(context).cardColor,
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.pop(context, ImageSource.camera),
-            icon: Icon(Icons.camera_alt),
-            label: Text("Camera"),
+            icon: Icon(Icons.camera_alt, color: Theme.of(context).primaryColor),
+            label: Text("Camera",
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                )),
           ),
           TextButton.icon(
             onPressed: () => Navigator.pop(context, ImageSource.gallery),
-            icon: Icon(Icons.photo_library),
-            label: Text("Gallery"),
+            icon: Icon(Icons.photo_library,
+                color: Theme.of(context).primaryColor),
+            label: Text("Gallery",
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                )),
           ),
         ],
       ),
@@ -127,6 +133,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(56),
@@ -144,14 +153,21 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
               ),
             ),
           ),
-          title: Text(
-            "My Profile",
-            style: TextStyle(color: Colors.white),
-          ),
+          title: Text("My Profile", style: TextStyle(color: Colors.white)),
           elevation: 0,
           backgroundColor: Colors.transparent,
           actions: [
-            TextButton.icon(
+            IconButton(
+              icon: Icon(
+                isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                ref.read(themeProvider.notifier).toggleTheme();
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.edit, color: Colors.white),
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
@@ -161,12 +177,10 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   ),
                   isScrollControlled: true,
                   builder: (context) => ProfileEditSheet(
-                    onUpdate: _fetchUserProfile, // ✅ Refresh profile data
+                    onUpdate: _fetchUserProfile,
                   ),
                 );
               },
-              icon: Icon(Icons.edit, color: Colors.white),
-              label: Text("Edit", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -174,22 +188,19 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
       body: _isLoading
           ? const Center(
               child: BouncingDotsLoader(
-              color: Colors.blue, // Customize color
-              dotSize: 20, // Customize dot size
-              duration:
-                  Duration(milliseconds: 800), // Customize animation speed
-            )) // 🔹 Show Loading Indicator
+              color: AppColors.primary,
+              dotSize: 20,
+              duration: Duration(milliseconds: 800),
+            ))
           : Column(
               children: [
-                // 🔹 Fixed Header (Profile Section)
                 Container(
                   width: double.infinity,
                   height: 170,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(40),
-                      bottomRight: Radius.circular(40),
-                    ),
+                        bottomLeft: Radius.circular(40),
+                        bottomRight: Radius.circular(40)),
                     gradient: LinearGradient(
                       colors: [AppColors.primary, AppColors.secondary],
                       begin: Alignment.topLeft,
@@ -200,19 +211,19 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       GestureDetector(
-                        onTap: _pickImage, // Allow user to select a new image
+                        onTap: _pickImage,
                         child: CircleAvatar(
                           maxRadius: 50.0,
-                          backgroundColor: AppColors.background,
+                          backgroundColor: isDarkMode
+                              ? Colors.grey[800]
+                              : AppColors.background,
                           child: _isLoading
                               ? const Center(
                                   child: BouncingDotsLoader(
-                                  color: Colors.blue, // Customize color
-                                  dotSize: 20, // Customize dot size
-                                  duration: Duration(
-                                      milliseconds:
-                                          800), // Customize animation speed
-                                )) // Show progress
+                                  color: AppColors.primary,
+                                  dotSize: 20,
+                                  duration: Duration(milliseconds: 800),
+                                ))
                               : (_profileImage != null)
                                   ? ClipOval(
                                       child: Image.file(
@@ -237,6 +248,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                                           _defaultPlaceholder,
                                           width: 60,
                                           height: 60,
+                                          color: isDarkMode
+                                              ? Colors.white
+                                              : Colors.black,
                                         ),
                         ),
                       ),
@@ -245,52 +259,48 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            _userData?['fullName'] ?? "Guest User",
-                            style: TextStyle(fontSize: 25, color: Colors.white),
-                          ),
-                          Text(
-                            _userData?['classYear'] ?? "Unknown Class",
-                            style:
-                                TextStyle(fontSize: 15, color: Colors.white70),
-                          ),
+                          Text(_userData?['fullName'] ?? "Guest User",
+                              style:
+                                  TextStyle(fontSize: 25, color: Colors.white)),
+                          Text(_userData?['classYear'] ?? "Unknown Class",
+                              style: TextStyle(
+                                  fontSize: 15, color: Colors.white70)),
                         ],
                       )
                     ],
                   ),
                 ),
-
-                // 🔹 Scrollable Info Section
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
                         SizedBox(height: 20),
-                        _buildSection("Personal Details", [
-                          _buildInfoTile(
-                              "Full Name", _userData?['fullName'] ?? "N/A"),
-                          _buildInfoTile("Date of Birth",
+                        _buildSection(context, "Personal Details", [
+                          _buildInfoTile(context, "Full Name",
+                              _userData?['fullName'] ?? "N/A"),
+                          _buildInfoTile(context, "Date of Birth",
                               _userData?['dateOfBirth'] ?? "N/A"),
                           _buildInfoTile(
-                              "Gender", _userData?['gender'] ?? "N/A"),
+                              context, "Gender", _userData?['gender'] ?? "N/A"),
                         ]),
-                        _buildSection("Academic Information", [
-                          _buildInfoTile(
-                              "Class/Year", _userData?['classYear'] ?? "N/A"),
-                          _buildInfoTile("College Name",
+                        _buildSection(context, "Academic Information", [
+                          _buildInfoTile(context, "Class/Year",
+                              _userData?['classYear'] ?? "N/A"),
+                          _buildInfoTile(context, "College Name",
                               _userData?['collegeName'] ?? "N/A"),
-                          _buildInfoTile(
-                              "Stream/Major", _userData?['stream'] ?? "N/A"),
-                          _buildInfoTile(
-                              "Subjects", _userData?['subjects'] ?? "N/A"),
-                          _buildInfoTile(
-                              "Study Mode", _userData?['studyMode'] ?? "N/A"),
-                          _buildInfoTile("Daily Study Goal",
+                          _buildInfoTile(context, "Stream/Major",
+                              _userData?['stream'] ?? "N/A"),
+                          _buildInfoTile(context, "Subjects",
+                              _userData?['subjects'] ?? "N/A"),
+                          _buildInfoTile(context, "Study Mode",
+                              _userData?['studyMode'] ?? "N/A"),
+                          _buildInfoTile(context, "Daily Study Goal",
                               _userData?['dailyGoal'] ?? "N/A"),
                         ]),
-                        _buildSection("Contact & Login Information", [
-                          _buildInfoTile("Email", _userData?['email'] ?? "N/A"),
-                          _buildInfoTile("Phone Number",
+                        _buildSection(context, "Contact & Login Information", [
+                          _buildInfoTile(
+                              context, "Email", _userData?['email'] ?? "N/A"),
+                          _buildInfoTile(context, "Phone Number",
                               _userData?['phoneNumber'] ?? "N/A"),
                         ]),
                         SizedBox(height: 20),
@@ -303,11 +313,14 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children) {
+  Widget _buildSection(
+      BuildContext context, String title, List<Widget> children) {
+    final theme = Theme.of(context);
     return Card(
       margin: EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       elevation: 3,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -315,9 +328,11 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            Divider(),
+            Divider(color: theme.dividerColor),
             ...children,
           ],
         ),
@@ -325,15 +340,21 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     );
   }
 
-  Widget _buildInfoTile(String label, String value) {
+  Widget _buildInfoTile(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          Text(value, style: TextStyle(fontSize: 16, color: Colors.black54)),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              )),
+          Text(value,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.textTheme.bodyLarge?.color?.withOpacity(0.7),
+              )),
         ],
       ),
     );

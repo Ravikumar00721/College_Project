@@ -58,65 +58,76 @@ class _QuizViewState extends State<QuizView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildQuestionCount(),
-            _buildQuestionCard(),
+            _buildQuestionCount(theme),
+            _buildQuestionCard(theme, isDarkMode),
             const SizedBox(height: 24),
             Expanded(
               child: ListView.separated(
                 itemCount: currentQuiz.options.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 8),
-                itemBuilder: (context, index) => _buildOptionButton(index),
+                separatorBuilder: (context, index) => Divider(
+                  color: theme.dividerColor,
+                  height: 8,
+                ),
+                itemBuilder: (context, index) =>
+                    _buildOptionButton(index, theme, isDarkMode),
               ),
             ),
             const SizedBox(height: 16),
-            _buildControlButton(),
-            if (_isAnswerSubmitted) _buildResultSection(),
+            _buildControlButton(theme),
+            if (_isAnswerSubmitted) _buildResultSection(theme),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuestionCount() {
+  Widget _buildQuestionCount(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Text(
         'Question ${_currentQuestionIndex + 1} of ${widget.quizzes.length}',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Colors.grey.shade600,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
     );
   }
 
-  Widget _buildQuestionCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.blue.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(
-          currentQuiz.question,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.blueGrey,
+  Widget _buildQuestionCard(ThemeData theme, bool isDarkMode) {
+    return SizedBox(
+      width: double.infinity, // Force full width
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        color: isDarkMode ? theme.cardColor : Colors.blue.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: double.infinity, // Double ensure full width
+            child: Text(
+              currentQuiz.question,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color:
+                    isDarkMode ? theme.colorScheme.onSurface : Colors.blueGrey,
+              ),
+              softWrap: true, // Ensure text wraps properly
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildOptionButton(int index) {
+  Widget _buildOptionButton(int index, ThemeData theme, bool isDarkMode) {
     final option = currentQuiz.options[index];
     final isCorrect = index == currentQuiz.correctOptionIndex;
     final isSelected = index == _selectedOptionIndex;
@@ -131,14 +142,14 @@ class _QuizViewState extends State<QuizView> {
         decoration: BoxDecoration(
           color: showAnswer
               ? isCorrect
-                  ? Colors.green.shade100
+                  ? Colors.green.withOpacity(isDarkMode ? 0.2 : 0.1)
                   : isSelected
-                      ? Colors.red.shade100
+                      ? Colors.red.withOpacity(isDarkMode ? 0.2 : 0.1)
                       : null
               : null,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            color: isSelected ? theme.colorScheme.primary : theme.dividerColor,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -147,6 +158,8 @@ class _QuizViewState extends State<QuizView> {
             Radio<int>(
               value: index,
               groupValue: _selectedOptionIndex,
+              fillColor: MaterialStateColor.resolveWith(
+                  (states) => theme.colorScheme.primary),
               onChanged: !_isAnswerSubmitted
                   ? (value) => setState(() => _selectedOptionIndex = value)
                   : null,
@@ -155,9 +168,10 @@ class _QuizViewState extends State<QuizView> {
             Expanded(
               child: Text(
                 option,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: showAnswer && isCorrect ? Colors.green.shade800 : null,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: showAnswer && isCorrect
+                      ? Colors.green.shade800
+                      : theme.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -167,7 +181,7 @@ class _QuizViewState extends State<QuizView> {
     );
   }
 
-  Widget _buildControlButton() {
+  Widget _buildControlButton(ThemeData theme) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -176,6 +190,8 @@ class _QuizViewState extends State<QuizView> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
         ),
         onPressed: _isLoading
             ? null
@@ -200,13 +216,13 @@ class _QuizViewState extends State<QuizView> {
                     : hasNextQuestion
                         ? 'Next Question'
                         : 'Finish Quiz',
-                style: const TextStyle(fontSize: 16),
+                style: theme.textTheme.labelLarge,
               ),
       ),
     );
   }
 
-  Widget _buildResultSection() {
+  Widget _buildResultSection(ThemeData theme) {
     final isCorrect = _selectedOptionIndex == currentQuiz.correctOptionIndex;
 
     return Padding(
@@ -223,9 +239,7 @@ class _QuizViewState extends State<QuizView> {
             const SizedBox(height: 16),
             Text(
               isCorrect ? 'Correct Answer!' : 'Incorrect Answer',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
                 color: isCorrect ? Colors.green : Colors.red,
               ),
             ),
@@ -236,9 +250,8 @@ class _QuizViewState extends State<QuizView> {
                 child: Text(
                   currentQuiz.explanation!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ),

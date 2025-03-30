@@ -1,12 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiz_craft_ai/services/auth_services.dart';
 import 'package:quiz_craft_ai/services/ocr_services.dart';
 
 import '../../core/themes.dart';
 import '../../models/quizmodel.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/textdata.dart';
 import 'create_profile.dart';
 
@@ -90,21 +92,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('QuizCraft AI',
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.white)),
-        centerTitle: true,
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-      ),
-      drawer: _buildDrawer(),
-      body: _buildContent(),
-      resizeToAvoidBottomInset: true,
+    return Consumer(
+      builder: (context, ref, child) {
+        // This will make the whole Scaffold rebuild when theme changes
+        final themeMode = ref.watch(themeProvider);
+        final isDarkMode = ref.watch(themeProvider.notifier).isDarkMode;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('QuizCraft AI',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white)),
+            centerTitle: true,
+            backgroundColor: AppColors.primary,
+            elevation: 0,
+            iconTheme: IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                icon: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 300),
+                  child: Icon(
+                    isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                    key: ValueKey<bool>(isDarkMode),
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () {
+                  ref.read(themeProvider.notifier).toggleTheme();
+                },
+              ),
+            ],
+          ),
+          drawer: _buildDrawer(),
+          body: _buildContent(),
+          resizeToAvoidBottomInset: true,
+        );
+      },
     );
   }
 
@@ -154,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Drawer(
       child: Column(
         children: [
+          // Header with animations
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             height: 220,
@@ -230,7 +256,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Expanded(
             child: AnimatedList(
               padding: EdgeInsets.zero,
-              initialItemCount: 4,
+              initialItemCount:
+                  5, // Reduced count since we removed theme toggle
               itemBuilder: (context, index, animation) {
                 return SlideTransition(
                   position: animation.drive(
@@ -256,16 +283,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     switch (index) {
       case 0:
         return _drawerItem(
-            Icons.account_circle_outlined, 'My Profile', '/myprofile');
+          Icons.account_circle_outlined,
+          'My Profile',
+          '/myprofile',
+        );
       case 1:
         return _drawerItem(
-            Icons.history_toggle_off_outlined, 'History', '/history');
+          Icons.history_toggle_off_outlined,
+          'History',
+          '/history',
+        );
       case 2:
+        return _drawerItem(
+          Icons.leaderboard_outlined, // Changed icon to leaderboard
+          'Leaderboard',
+          '/leaderboard',
+        );
+      case 3:
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Divider(color: Colors.grey[300], height: 1),
         );
-      case 3:
+      case 4:
         return _drawerItem(
           Icons.logout_outlined,
           'Sign Out',
@@ -292,15 +331,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: ListTile(
           leading: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            child: Icon(icon, color: color ?? AppColors.primary, size: 28),
+            child: Icon(
+              icon,
+              color: color ?? AppColors.primary,
+              size: 28,
+            ),
           ),
-          title: Text(title,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: isSignOut ? Colors.redAccent : Colors.grey[800])),
-          trailing: Icon(Icons.chevron_right_rounded,
-              color: color ?? AppColors.primary.withOpacity(0.5)),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: isSignOut ? Colors.redAccent : Colors.grey[800],
+            ),
+          ),
+          trailing: Icon(
+            Icons.chevron_right_rounded,
+            color: color ?? AppColors.primary.withOpacity(0.5),
+          ),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         ),

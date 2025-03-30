@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiz_craft_ai/views/quiz/quiz_view.dart';
 
 import '../../providers/quiz_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/bouncing.dart';
 
 class QuizScreen extends ConsumerWidget {
@@ -14,6 +15,7 @@ class QuizScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quizAsyncValue = ref.watch(quizProvider(documentId));
+    final isDarkMode = ref.watch(themeProvider.notifier).isDarkMode;
 
     return Scaffold(
       appBar: AppBar(
@@ -29,14 +31,25 @@ class QuizScreen extends ConsumerWidget {
             ),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              ref.read(themeProvider.notifier).toggleTheme();
+            },
+          ),
+        ],
       ),
       body: quizAsyncValue.when(
         data: (quizzes) => QuizView(quizzes: quizzes),
         loading: () => const Center(
             child: BouncingDotsLoader(
-          color: Colors.blue, // Customize color
-          dotSize: 20, // Customize dot size
-          duration: Duration(milliseconds: 800), // Customize animation speed
+          color: Colors.blue,
+          dotSize: 20,
+          duration: Duration(milliseconds: 800),
         )),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
