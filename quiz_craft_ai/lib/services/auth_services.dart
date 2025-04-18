@@ -132,11 +132,12 @@ class AuthService {
     return null;
   }
 
-  // Add to AuthService
   Future<void> saveQuizResult({
     required List<QuizModel> quizzes,
     required int correctAnswers,
     required List<int?> userAnswers,
+    required String selectedSubCategory,
+    required String selectedSubject,
   }) async {
     try {
       final user = _auth.currentUser;
@@ -149,15 +150,43 @@ class AuthService {
         'userId': user.uid,
         'timestamp': FieldValue.serverTimestamp(),
         'correctAnswers': correctAnswers,
-        'incorrectAnswers': totalQuestions - correctAnswers,
         'totalQuestions': totalQuestions,
         'score': score,
         'quizzes': quizzes.map((q) => q.toMap()).toList(),
         'userAnswers': userAnswers,
+        'selectedSubCategory': selectedSubCategory,
+        'selectedSubject': selectedSubject,
       });
       print("Quiz results saved successfully");
     } catch (e) {
       print("Error saving quiz results: $e");
+    }
+  }
+
+  // Add to AuthService class
+  Future<List<QuizResult>> getAllQuizResults() async {
+    try {
+      QuerySnapshot querySnapshot =
+          await _firestore.collection('quizResults').get();
+      return querySnapshot.docs
+          .map((doc) => QuizResult.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print("Error fetching quiz results: $e");
+      return [];
+    }
+  }
+
+  Future<ProfileModel?> getUserById(String userId) async {
+    try {
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(userId).get();
+      return doc.exists
+          ? ProfileModel.fromMap(doc.data() as Map<String, dynamic>)
+          : null;
+    } catch (e) {
+      print("Error fetching user: $e");
+      return null;
     }
   }
 

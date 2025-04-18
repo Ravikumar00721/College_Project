@@ -5,13 +5,10 @@ class ProfileModel {
   String collegeName;
   String classYear;
   String stream;
-  String subjects;
-  String studyMode;
-  String dailyGoal;
   String email;
   String phoneNumber;
-  String loginMethod;
   String profileImagePath;
+  String selectedCategory;
 
   ProfileModel({
     this.fullName = "Guest User",
@@ -20,13 +17,10 @@ class ProfileModel {
     this.collegeName = "Unknown College",
     this.classYear = "Unknown Year",
     this.stream = "Unknown Stream",
-    this.subjects = "Not Specified",
-    this.studyMode = "Self Study",
-    this.dailyGoal = "1 Hour",
     this.email = "guest@example.com",
     this.phoneNumber = "0000000000",
-    this.loginMethod = "Manual",
     this.profileImagePath = "",
+    this.selectedCategory = "",
   });
 
   // ✅ Convert to Map (for Firestore)
@@ -38,13 +32,10 @@ class ProfileModel {
       "collegeName": collegeName,
       "classYear": classYear,
       "stream": stream,
-      "subjects": subjects,
-      "studyMode": studyMode,
-      "dailyGoal": dailyGoal,
       "email": email,
       "phoneNumber": phoneNumber,
-      "loginMethod": loginMethod,
       "profileImagePath": profileImagePath,
+      "selectedCategory": selectedCategory,
     };
   }
 
@@ -57,13 +48,10 @@ class ProfileModel {
       collegeName: map?["collegeName"] ?? "Unknown College",
       classYear: map?["classYear"] ?? "Unknown Year",
       stream: map?["stream"] ?? "Unknown Stream",
-      subjects: map?["subjects"] ?? "Not Specified",
-      studyMode: map?["studyMode"] ?? "Self Study",
-      dailyGoal: map?["dailyGoal"] ?? "1 Hour",
       email: map?["email"] ?? "guest@example.com",
       phoneNumber: map?["phoneNumber"] ?? "0000000000",
-      loginMethod: map?["loginMethod"] ?? "Manual",
       profileImagePath: map?["profileImagePath"] ?? "",
+      selectedCategory: map?["selectedCategory"] ?? "",
     );
   }
 
@@ -75,13 +63,12 @@ class ProfileModel {
     String? collegeName,
     String? classYear,
     String? stream,
-    String? subjects,
-    String? studyMode,
-    String? dailyGoal,
     String? email,
     String? phoneNumber,
-    String? loginMethod,
     String? profileImagePath,
+    String? selectedCategory,
+    String? selectedSubCategory,
+    String? selectedSubject,
   }) {
     return ProfileModel(
       fullName: fullName ?? this.fullName,
@@ -90,13 +77,10 @@ class ProfileModel {
       collegeName: collegeName ?? this.collegeName,
       classYear: classYear ?? this.classYear,
       stream: stream ?? this.stream,
-      subjects: subjects ?? this.subjects,
-      studyMode: studyMode ?? this.studyMode,
-      dailyGoal: dailyGoal ?? this.dailyGoal,
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
-      loginMethod: loginMethod ?? this.loginMethod,
       profileImagePath: profileImagePath ?? this.profileImagePath,
+      selectedCategory: selectedCategory ?? this.selectedCategory,
     );
   }
 }

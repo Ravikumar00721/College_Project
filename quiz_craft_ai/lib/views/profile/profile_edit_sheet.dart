@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 import '../../models/usermodel.dart';
 
 class ProfileEditSheet extends ConsumerStatefulWidget {
-  final VoidCallback onUpdate; // Callback to refresh profile after update
+  final VoidCallback onUpdate;
 
   const ProfileEditSheet({super.key, required this.onUpdate});
 
@@ -17,27 +17,35 @@ class ProfileEditSheet extends ConsumerStatefulWidget {
 
 class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
   final _formKey = GlobalKey<FormState>();
-
   late TextEditingController nameController;
   late TextEditingController dobController;
   late TextEditingController collegeController;
   late TextEditingController classYearController;
   late TextEditingController streamController;
   late TextEditingController subjectsController;
-  late TextEditingController studyModeController;
-  late TextEditingController dailyGoalController;
   late TextEditingController phoneController;
 
   String? selectedGender;
-  bool isLoading = true; // ✅ Show loader until data is fetched
+  String? selectedCategory; // Added category state
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
     _fetchProfileFromFirestore();
   }
 
-  // ✅ Fetch Profile Data from Firestore
+  void _initializeControllers() {
+    nameController = TextEditingController();
+    dobController = TextEditingController();
+    collegeController = TextEditingController();
+    classYearController = TextEditingController();
+    streamController = TextEditingController();
+    subjectsController = TextEditingController();
+    phoneController = TextEditingController();
+  }
+
   Future<void> _fetchProfileFromFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -45,69 +53,46 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
     try {
       DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection("users")
-          .doc(user.email) // Fetch using email
+          .doc(user.email)
           .get();
 
       if (doc.exists) {
         final profile =
             ProfileModel.fromMap(doc.data() as Map<String, dynamic>);
-
         setState(() {
-          nameController = TextEditingController(text: profile.fullName);
-          dobController = TextEditingController(text: profile.dateOfBirth);
-          collegeController = TextEditingController(text: profile.collegeName);
-          classYearController = TextEditingController(text: profile.classYear);
-          streamController = TextEditingController(text: profile.stream);
-          subjectsController = TextEditingController(text: profile.subjects);
-          studyModeController = TextEditingController(text: profile.studyMode);
-          dailyGoalController = TextEditingController(text: profile.dailyGoal);
-          phoneController = TextEditingController(text: profile.phoneNumber);
+          nameController.text = profile.fullName;
+          dobController.text = profile.dateOfBirth;
+          collegeController.text = profile.collegeName;
+          classYearController.text = profile.classYear;
+          streamController.text = profile.stream;
+          phoneController.text = profile.phoneNumber;
           selectedGender = profile.gender;
-          isLoading = false; // Hide loader
+          selectedCategory = profile.selectedCategory; // Initialize category
+          isLoading = false;
         });
       }
     } catch (e) {
-      print("🔥 Error fetching profile: $e");
-    }
-  }
-
-  // ✅ Date Picker Function
-  Future<void> _selectDate(BuildContext context) async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000, 1, 1), // Default selection
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-    );
-
-    if (pickedDate != null) {
-      setState(() {
-        dobController.text = DateFormat('dd MMM yyyy').format(pickedDate);
-      });
+      print("Error fetching profile: $e");
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> _updateProfile() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && selectedCategory != null) {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      setState(() {
-        isLoading = true; // Show loading indicator before updating
-      });
+      setState(() => isLoading = true);
 
       try {
-        // 🔹 Fetch the current user profile to retain the existing image
         DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection("users")
             .doc(user.email)
             .get();
 
-        String existingImagePath = "";
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          existingImagePath = data['profileImagePath'] ?? ""; // Preserve image
-        }
+        String existingImagePath = doc.exists
+            ? (doc.data() as Map<String, dynamic>)['profileImagePath'] ?? ""
+            : "";
 
         ProfileModel updatedProfile = ProfileModel(
           fullName: nameController.text,
@@ -116,13 +101,10 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
           collegeName: collegeController.text,
           classYear: classYearController.text,
           stream: streamController.text,
-          subjects: subjectsController.text,
-          studyMode: studyModeController.text,
-          dailyGoal: dailyGoalController.text,
           email: user.email!,
           phoneNumber: phoneController.text,
-          loginMethod: "Manual",
-          profileImagePath: existingImagePath, // 🔹 Retain existing image
+          profileImagePath: existingImagePath,
+          selectedCategory: selectedCategory!, // Ensured non-null
         );
 
         await FirebaseFirestore.instance
@@ -130,14 +112,12 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
             .doc(user.email)
             .set(updatedProfile.toMap(), SetOptions(merge: true));
 
-        widget.onUpdate(); // ✅ Refresh Profile Screen
-        Navigator.pop(context); // Close bottom sheet
+        widget.onUpdate();
+        Navigator.pop(context);
       } catch (e) {
-        print("🔥 Error updating profile: $e");
+        print("Error updating profile: $e");
       } finally {
-        setState(() {
-          isLoading = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
@@ -157,7 +137,7 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: isLoading
-              ? Center(child: CircularProgressIndicator()) // ✅ Show Loader
+              ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
                   controller: scrollController,
                   child: Form(
@@ -165,48 +145,72 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(height: 10),
-                        Container(
-                          width: 60,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text("Edit Profile",
+                        _buildDragHandle(),
+                        const SizedBox(height: 10),
+                        const Text("Edit Profile",
                             style: TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold)),
-                        SizedBox(height: 10),
-                        _buildTextField("Full Name", nameController,
-                            required: true),
-                        _buildDatePickerField("Date of Birth", dobController),
-                        _buildGenderDropdown(),
-                        _buildTextField("College Name", collegeController,
-                            required: true),
-                        _buildTextField("Class/Year", classYearController,
-                            required: true),
-                        _buildTextField("Stream/Major", streamController),
-                        _buildTextField(
-                            "Subjects of Interest", subjectsController),
-                        _buildTextField("Learning Mode", studyModeController),
-                        _buildTextField(
-                            "Daily Study Goal", dailyGoalController),
-                        _buildTextField("Phone Number", phoneController,
-                            required: true),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _updateProfile,
-                          child: Text("Save Changes"),
-                        ),
-                        SizedBox(height: 10),
+                        _buildFormFields(),
+                        _buildSaveButton(),
                       ],
                     ),
                   ),
                 ),
         );
       },
+    );
+  }
+
+  Widget _buildDragHandle() {
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        Container(
+          width: 60,
+          height: 5,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormFields() {
+    return Column(
+      children: [
+        _buildTextField("Full Name", nameController, required: true),
+        _buildDatePickerField("Date of Birth", dobController),
+        _buildGenderDropdown(),
+        _buildCategoryDropdown(),
+        _buildTextField("College Name", collegeController, required: true),
+        _buildTextField("Class/Year", classYearController, required: true),
+        _buildTextField("Stream/Major", streamController),
+        _buildTextField("Subjects", subjectsController),
+        _buildTextField("Phone Number", phoneController, required: true),
+      ],
+    );
+  }
+
+  Widget _buildCategoryDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: DropdownButtonFormField<String>(
+        value: selectedCategory,
+        decoration: const InputDecoration(
+          labelText: "Category *",
+          border: OutlineInputBorder(),
+        ),
+        items: const ["School", "College"]
+            .map((category) => DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                ))
+            .toList(),
+        onChanged: (value) => setState(() => selectedCategory = value),
+        validator: (value) => value == null ? "Please select category" : null,
+      ),
     );
   }
 
@@ -218,7 +222,7 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
         controller: controller,
         decoration: InputDecoration(
           labelText: required ? "$label *" : label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
         validator: required
             ? (value) => value!.isEmpty ? "This field is required" : null
@@ -233,14 +237,13 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
       child: TextFormField(
         controller: controller,
         readOnly: true,
-        decoration: InputDecoration(
-          labelText: "$label *",
+        decoration: const InputDecoration(
+          labelText: "Date of Birth *",
           border: OutlineInputBorder(),
           suffixIcon: Icon(Icons.calendar_today, color: Colors.blueGrey),
         ),
         onTap: () => _selectDate(context),
-        validator: (value) =>
-            value == null || value.isEmpty ? "Date of Birth is required" : null,
+        validator: (value) => value?.isEmpty ?? true ? "Required field" : null,
       ),
     );
   }
@@ -250,20 +253,41 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: DropdownButtonFormField<String>(
         value: selectedGender,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           labelText: "Gender *",
           border: OutlineInputBorder(),
         ),
         items: ["Male", "Female", "Others"]
-            .map((gender) =>
-                DropdownMenuItem(value: gender, child: Text(gender)))
+            .map((gender) => DropdownMenuItem(
+                  value: gender,
+                  child: Text(gender),
+                ))
             .toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedGender = value;
-          });
-        },
+        onChanged: (value) => setState(() => selectedGender = value),
+        validator: (value) => value == null ? "Please select gender" : null,
       ),
     );
+  }
+
+  Widget _buildSaveButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: ElevatedButton(
+        onPressed: _updateProfile,
+        child: const Text("Save Changes"),
+      ),
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      dobController.text = DateFormat('dd MMM yyyy').format(picked);
+    }
   }
 }

@@ -4,16 +4,22 @@ import 'package:quiz_craft_ai/models/quizmodel.dart';
 class QuizResult {
   final DateTime timestamp;
   final int correctAnswers;
+  final String userId;
   final int totalQuestions;
   final List<QuizModel> quizzes;
   final List<int?> userAnswers;
+  final String selectedSubCategory;
+  final String selectedSubject;
 
   QuizResult({
     required this.timestamp,
+    required this.userId,
     required this.correctAnswers,
     required this.totalQuestions,
     required this.quizzes,
     required this.userAnswers,
+    this.selectedSubCategory = "",
+    this.selectedSubject = "",
   });
 
   factory QuizResult.fromFirestore(DocumentSnapshot doc) {
@@ -29,6 +35,9 @@ class QuizResult {
       userAnswers: (data['userAnswers'] as List<dynamic>)
           .map((e) => e != null ? (e as num).toInt() : null)
           .toList(),
+      userId: data['userId'] ?? '',
+      selectedSubCategory: data['selectedSubCategory'] ?? '',
+      selectedSubject: data['selectedSubject'] ?? '',
     );
   }
 

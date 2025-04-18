@@ -57,14 +57,17 @@ final GoRouter router = GoRouter(
       },
     ),
     GoRoute(
-        path:
-            "/generate-quiz/:documentId", // Use a dynamic route parameter for documentId
-        builder: (context, state) {
-          final documentId = state.pathParameters['documentId']!;
-          print("Document ID is : $documentId");
-          return QuizScreen(
-              documentId: documentId); // Pass documentId to QuizScreen
-        }),
+      path: "/generate-quiz/:documentId",
+      builder: (context, state) {
+        final documentId = state.pathParameters['documentId']!;
+        final extra = state.extra as Map<String, String>;
+        return QuizScreen(
+          documentId: documentId,
+          selectedSubCategory: extra['selectedSubCategory']!,
+          selectedSubject: extra['selectedSubject']!,
+        );
+      },
+    ),
 
     // 🔹 Profile Edit Sheet as a Full Screen Page
     GoRoute(

@@ -7,8 +7,17 @@ import '../../widgets/bouncing.dart';
 
 class QuizView extends StatefulWidget {
   final List<QuizModel> quizzes;
+  final String selectedSubCategory;
+  final String selectedSubject;
 
-  const QuizView({Key? key, required this.quizzes}) : super(key: key);
+  const QuizView({
+    Key? key,
+    required this.quizzes,
+    required this.selectedSubCategory,
+    required this.selectedSubject,
+  }) : super(
+          key: key,
+        );
 
   @override
   _QuizViewState createState() => _QuizViewState();
@@ -36,6 +45,8 @@ class _QuizViewState extends State<QuizView> {
         quizzes: widget.quizzes,
         correctAnswers: correctAnswers,
         userAnswers: _userAnswers.values.toList(),
+        selectedSubCategory: widget.selectedSubCategory,
+        selectedSubject: widget.selectedSubject,
       );
 
       Navigator.of(context).push(
@@ -56,6 +67,23 @@ class _QuizViewState extends State<QuizView> {
     }
   }
 
+  // Add this widget at the top of the build method
+  Widget _buildQuizHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Subject: ${widget.selectedSubject}',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          SizedBox(height: 4),
+          Text('Category: ${widget.selectedSubCategory}',
+              style: TextStyle(fontSize: 14, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -67,6 +95,7 @@ class _QuizViewState extends State<QuizView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildQuizHeader(),
             _buildQuestionCount(theme),
             _buildQuestionCard(theme, isDarkMode),
             const SizedBox(height: 24),

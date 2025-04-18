@@ -9,8 +9,15 @@ import '../../widgets/bouncing.dart';
 
 class QuizScreen extends ConsumerWidget {
   final String documentId;
+  final String selectedSubCategory;
+  final String selectedSubject;
 
-  const QuizScreen({Key? key, required this.documentId}) : super(key: key);
+  const QuizScreen({
+    Key? key,
+    required this.documentId,
+    required this.selectedSubCategory,
+    required this.selectedSubject,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +51,11 @@ class QuizScreen extends ConsumerWidget {
         ],
       ),
       body: quizAsyncValue.when(
-        data: (quizzes) => QuizView(quizzes: quizzes),
+        data: (quizzes) => QuizView(
+          quizzes: quizzes,
+          selectedSubCategory: selectedSubCategory!,
+          selectedSubject: selectedSubject!,
+        ),
         loading: () => const Center(
             child: BouncingDotsLoader(
           color: Colors.blue,

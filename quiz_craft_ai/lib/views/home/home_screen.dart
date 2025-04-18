@@ -23,6 +23,158 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final User? user = FirebaseAuth.instance.currentUser;
   bool _profileExists = false;
   bool _profileDialogShown = false;
+  final Map<String, dynamic> filterOptions = {
+    'School': {
+      'Class 1': ['English', 'Mathematics', 'Environmental Studies (EVS)'],
+      'Class 2': ['English', 'Mathematics', 'Environmental Studies (EVS)'],
+      'Class 3': ['English', 'Mathematics', 'Science', 'Social Studies'],
+      'Class 4': ['English', 'Mathematics', 'Science', 'Social Studies'],
+      'Class 5': ['English', 'Mathematics', 'Science', 'Social Studies'],
+      'Class 6': [
+        'English',
+        'Mathematics',
+        'Science',
+        'Social Studies',
+        'Computer Science'
+      ],
+      'Class 7': [
+        'English',
+        'Mathematics',
+        'Science',
+        'Social Studies',
+        'Computer Science'
+      ],
+      'Class 8': [
+        'English',
+        'Mathematics',
+        'Science',
+        'Social Studies',
+        'Computer Science'
+      ],
+      'Class 9': [
+        'English',
+        'Mathematics',
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'History',
+        'Geography',
+        'Civics',
+        'Economics',
+        'Computer Science'
+      ],
+      'Class 10': [
+        'English',
+        'Mathematics',
+        'Physics',
+        'Chemistry',
+        'Biology',
+        'History',
+        'Geography',
+        'Civics',
+        'Economics',
+        'Computer Science'
+      ],
+      'Class 11-12': {
+        'Science Stream': [
+          'Physics',
+          'Chemistry',
+          'Mathematics',
+          'Biology',
+          'Computer Science'
+        ],
+        'Commerce Stream': [
+          'Accountancy',
+          'Economics',
+          'Business Studies',
+          'Mathematics'
+        ],
+        'Arts Stream': [
+          'History',
+          'Political Science',
+          'Geography',
+          'Psychology',
+          'Sociology',
+          'Journalism'
+        ]
+      }
+    },
+    'College': {
+      'Undergraduate Programs': {
+        'BCA': [
+          'Programming',
+          'Database',
+          'Web Development',
+          'Software Engineering'
+        ],
+        'B.Tech': [
+          'Computer Science',
+          'Mechanical Engineering',
+          'Civil Engineering',
+          'Electrical Engineering',
+          'Electronics',
+          'AI & ML',
+          'Data Science'
+        ],
+        'B.Sc': [
+          'Physics',
+          'Chemistry',
+          'Mathematics',
+          'Biology',
+          'Biotechnology'
+        ],
+        'B.Com': ['Accountancy', 'Economics', 'Business Studies', 'Finance'],
+        'BA': [
+          'History',
+          'Political Science',
+          'Geography',
+          'Psychology',
+          'Journalism'
+        ],
+        'BBA': ['Marketing', 'Finance', 'Human Resources', 'Entrepreneurship'],
+        'LLB': ['Contract Law', 'Criminal Law', 'Corporate Law'],
+        'Other': ['Liberal Arts', 'Mass Communication', 'Design']
+      },
+      'Postgraduate Programs': {
+        'MCA': [
+          'Advanced Programming',
+          'Cloud Computing',
+          'Big Data',
+          'Cyber Security'
+        ],
+        'M.Tech': [
+          'AI & ML',
+          'Embedded Systems',
+          'Cybersecurity',
+          'VLSI Design'
+        ],
+        'M.Sc': [
+          'Physics',
+          'Chemistry',
+          'Mathematics',
+          'Biotechnology',
+          'Data Science'
+        ],
+        'M.Com': ['Advanced Accountancy', 'Financial Management', 'Taxation'],
+        'MA': [
+          'History',
+          'Political Science',
+          'Public Administration',
+          'International Relations',
+          'English Literature'
+        ],
+        'MBA': [
+          'Marketing Management',
+          'Financial Management',
+          'Operations Management',
+          'Business Analytics',
+          'HR Management'
+        ],
+        'LLM': ['International Law', 'Constitutional Law', 'Corporate Law'],
+        'Other': ['Liberal Arts', 'Public Policy', 'Mass Communication']
+      }
+    }
+  };
 
   String fullName = "Guest User";
   String email = "user@example.com";
@@ -32,6 +184,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? extractedText;
   late TextEditingController _textController;
   String? _selectedInputSource;
+
+  // Add these state variables
+  String? selectedCategory;
+  String? selectedSubCategory;
+  String? selectedSubject;
+  List<String> subCategoryOptions = [];
+  List<String> subjectOptions = [];
 
   @override
   void initState() {
@@ -58,17 +217,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             .get();
 
         if (doc.exists) {
+          final profileData = doc.data() as Map<String, dynamic>;
           setState(() {
-            fullName = doc["fullName"] ?? "Guest User";
-            profileImage = doc["profileImagePath"] ?? "";
             _profileExists = true;
+
+            // ✅ Fetch full name
+            fullName = profileData['fullName']?.toString() ?? "Guest User";
+
+            // ✅ Fetch profile image if available
+            profileImage = profileData['profileImagePath']?.toString() ?? "";
+
+            // ✅ Fetch and initialize category
+            selectedCategory =
+                profileData['selectedCategory']?.toString() ?? '';
+
+            // ✅ Initialize subcategories if category exists
+            if (selectedCategory != null && selectedCategory!.isNotEmpty) {
+              subCategoryOptions = _getSubCategories(selectedCategory!);
+            }
           });
-        } else {
-          setState(() => _profileExists = false);
         }
       } catch (e) {
         print("Error fetching profile: $e");
       }
+
       if (!_profileExists && !_profileDialogShown) {
         WidgetsBinding.instance
             .addPostFrameCallback((_) => _showCreateProfileBottomSheet());
@@ -81,9 +253,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     bool? result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      enableDrag: false,
-      builder: (context) => CreateProfileBottomSheet(),
+      enableDrag: false, // Disable swipe-down dismissal
+      isDismissible: false, // Disable tapping outside dismissal
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false, // Disable back button dismissal
+        child: CreateProfileBottomSheet(),
+      ),
     );
+
     if (result == true) {
       setState(() => _profileExists = true);
       _fetchUserProfile();
@@ -131,6 +309,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       },
     );
+  }
+
+  List<String> _getSubCategories(String category) {
+    final categoryData = filterOptions[category];
+    if (categoryData is Map<String, dynamic>) {
+      return categoryData.keys.toList().cast<String>();
+    }
+    return [];
+  }
+
+  List<String> _getSubjects(String category, String subCategory) {
+    final categoryData = filterOptions[category];
+    final subCategoryData = categoryData[subCategory];
+
+    if (subCategoryData is Map<String, dynamic>) {
+      // For college programs with nested structure
+      return subCategoryData.values
+          .expand((subList) => (subList as List<dynamic>).cast<String>())
+          .toList();
+    } else if (subCategoryData is List<dynamic>) {
+      return subCategoryData.cast<String>();
+    }
+    return [];
   }
 
   Widget _buildTextInputSection() {
@@ -388,6 +589,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Add category dropdowns first
+                              _buildCategorySection(),
+                              SizedBox(height: 24),
                               _buildUploadSection(),
                               SizedBox(height: 24),
                               _buildTextInputSection(),
@@ -408,6 +612,119 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         );
       },
+    );
+  }
+
+  // 2. Update the category section display
+  Widget _buildCategorySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Subject Category',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800])),
+        SizedBox(height: 16),
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              if (selectedCategory != null && selectedCategory!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text('Education Level: $selectedCategory',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700])),
+                ),
+              _buildCategoryDropdowns(),
+              SizedBox(height: 12),
+              Text(
+                  'Selected: ${selectedCategory ?? 'None'} → '
+                  '${selectedSubCategory ?? 'None'} → '
+                  '${selectedSubject ?? 'None'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+// 3. Simplified dropdown builder
+  Widget _buildCategoryDropdowns() {
+    return Column(
+      children: [
+        if (selectedCategory != null && selectedCategory!.isNotEmpty) ...[
+          _buildStyledDropdown(
+            value: selectedSubCategory,
+            label: _getSubCategoryLabel(),
+            items: subCategoryOptions,
+            onChanged: (newValue) {
+              setState(() {
+                selectedSubCategory = newValue;
+                selectedSubject = null;
+                subjectOptions = _getSubjects(selectedCategory!, newValue!);
+              });
+            },
+          ),
+          SizedBox(height: 12),
+          if (selectedSubCategory != null)
+            _buildStyledDropdown(
+              value: selectedSubject,
+              label: 'Select Subject',
+              items: subjectOptions,
+              onChanged: (newValue) =>
+                  setState(() => selectedSubject = newValue),
+            ),
+        ],
+      ],
+    );
+  }
+
+// 4. Update helper method
+  String _getSubCategoryLabel() {
+    if (selectedCategory == 'School') return 'Select Class';
+    if (selectedCategory == 'College') return 'Select Program';
+    return 'Select Subcategory';
+  }
+
+  Widget _buildStyledDropdown({
+    required String? value,
+    required String label,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          items: items.map((String value) {
+            return DropdownMenuItem(
+              value: value,
+              child: Text(value,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+            );
+          }).toList(),
+          onChanged: onChanged,
+          hint: Text('Choose...', style: TextStyle(color: Colors.grey[500])),
+        ),
+      ),
     );
   }
 
@@ -505,6 +822,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .showSnackBar(SnackBar(content: Text('Please input some text')));
       return;
     }
+    // Add category validation
+    if (selectedSubCategory == null || selectedSubject == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select category and subject')),
+      );
+      return;
+    }
 
     final textData = TextDataModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -517,7 +841,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final documentId = await firestoreService.saveExtractedText(textData);
 
     if (documentId != null) {
-      context.push('/generate-quiz/$documentId');
+      context.push(
+        '/generate-quiz/$documentId',
+        extra: {
+          'selectedSubCategory': selectedSubCategory!,
+          'selectedSubject': selectedSubject!,
+        },
+      );
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Failed to save text data')));

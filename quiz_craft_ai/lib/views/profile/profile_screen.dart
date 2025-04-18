@@ -275,15 +275,14 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                     child: Column(
                       children: [
                         SizedBox(height: 20),
-                        _buildSection(context, "Personal Details", [
-                          _buildInfoTile(context, "Full Name",
-                              _userData?['fullName'] ?? "N/A"),
-                          _buildInfoTile(context, "Date of Birth",
-                              _userData?['dateOfBirth'] ?? "N/A"),
-                          _buildInfoTile(
-                              context, "Gender", _userData?['gender'] ?? "N/A"),
-                        ]),
                         _buildSection(context, "Academic Information", [
+                          // Add this new line for category
+                          _buildInfoTile(
+                              context,
+                              "Category",
+                              _userData?['selectedCategory']?.isNotEmpty == true
+                                  ? _userData!['selectedCategory']
+                                  : "N/A"),
                           _buildInfoTile(context, "Class/Year",
                               _userData?['classYear'] ?? "N/A"),
                           _buildInfoTile(context, "College Name",
@@ -296,12 +295,6 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                               _userData?['studyMode'] ?? "N/A"),
                           _buildInfoTile(context, "Daily Study Goal",
                               _userData?['dailyGoal'] ?? "N/A"),
-                        ]),
-                        _buildSection(context, "Contact & Login Information", [
-                          _buildInfoTile(
-                              context, "Email", _userData?['email'] ?? "N/A"),
-                          _buildInfoTile(context, "Phone Number",
-                              _userData?['phoneNumber'] ?? "N/A"),
                         ]),
                         SizedBox(height: 20),
                       ],

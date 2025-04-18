@@ -21,6 +21,7 @@ class _CreateProfileBottomSheetState
   TextEditingController phoneController = TextEditingController();
   String? selectedGender;
   String email = "Loading..."; // Placeholder
+  String? selectedCategory;
 
   @override
   void initState() {
@@ -54,43 +55,42 @@ class _CreateProfileBottomSheetState
     }
   }
 
-  // ✅ Submit Data to Firestore
+// Add this variable to track submission state
+  bool _isSubmitting = false;
+
+// Modified Submit Method
   Future<void> _submitProfile() async {
     try {
-      if (_formKey.currentState!.validate() && selectedGender != null) {
-        // Create Profile Model with Default Values
-        ProfileModel profile = ProfileModel(
-          fullName: nameController.text.isNotEmpty
-              ? nameController.text
-              : "Guest User",
-          dateOfBirth: dobController.text.isNotEmpty
-              ? dobController.text
-              : "01 Jan 2000",
-          gender: selectedGender ?? "Male",
-          collegeName: "Unknown College",
-          classYear: "Unknown Year",
-          stream: "Unknown Stream",
-          subjects: "Not Specified",
-          studyMode: "Self Study",
-          dailyGoal: "1 Hour",
-          email: email,
-          phoneNumber: phoneController.text.isNotEmpty
-              ? phoneController.text
-              : "0000000000",
-          loginMethod: "Manual",
-          profileImagePath: "",
-        );
+      setState(() => _isSubmitting = true);
 
-        // Save to Firestore using Riverpod
-        await ref.read(profileProvider.notifier).updateProfile(profile);
+      // Validate all form fields
+      if (!_formKey.currentState!.validate()) {
+        return; // Keep sheet open if validation fails
+      }
 
-        // Close Bottom Sheet
+      // Create Profile Model
+      ProfileModel profile = ProfileModel(
+        fullName: nameController.text,
+        dateOfBirth: dobController.text,
+        gender: selectedGender!,
+        collegeName: "Unknown College",
+        classYear: "Unknown Year",
+        stream: "Unknown Stream",
+        email: email,
+        phoneNumber: phoneController.text,
+        profileImagePath: "",
+        selectedCategory: selectedCategory!,
+      );
+
+      // Save to Firestore
+      await ref.read(profileProvider.notifier).updateProfile(profile);
+
+      // Only close on successful submission
+      if (mounted) {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print("🔥 Error saving profile: $e");
-
-      // Show error message to the user
+      print("Error saving profile: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -99,51 +99,96 @@ class _CreateProfileBottomSheetState
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.8,
-      builder: (context, scrollController) {
-        return Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Text("Create Your Profile",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 15),
-                  _buildTextField("Full Name", nameController,
-                      required: true, type: "name"),
-                  _buildDatePickerField("Date of Birth", dobController),
-                  _buildGenderDropdown(),
-                  _buildNonEditableField("Email", email), // Non-editable Email
-                  _buildTextField("Phone Number", phoneController,
-                      required: true, type: "phone"),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _submitProfile, // Save to Firestore
-                    child: Text("Submit"),
-                  ),
-                ],
-              ),
+    return WillPopScope(
+      onWillPop: () async => false, // Block back button
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // ❌ Optional: Remove this to prevent manual closing
+                // Align(
+                //   alignment: Alignment.topRight,
+                //   child: IconButton(
+                //     icon: Icon(Icons.close),
+                //     onPressed: () => Navigator.pop(context),
+                //   ),
+                // ),
+
+                Text(
+                  "Create Your Profile",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 15),
+                _buildTextField("Full Name", nameController,
+                    required: true, type: "name"),
+                _buildCategoryDropdown(),
+                _buildDatePickerField("Date of Birth", dobController),
+                _buildGenderDropdown(),
+                _buildNonEditableField("Email", email),
+                _buildTextField("Phone Number", phoneController,
+                    required: true, type: "phone"),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submitProfile,
+                  child: _isSubmitting
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text("Submit"),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  // ✅ Add Category Dropdown
+  Widget _buildCategoryDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: DropdownButtonFormField<String>(
+        value: selectedCategory,
+        decoration: InputDecoration(
+          labelText: "Category *",
+          border: OutlineInputBorder(),
+        ),
+        items: const ["School", "College"]
+            .map((category) => DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                ))
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            selectedCategory = value;
+          });
+        },
+        validator: (value) =>
+            value == null ? "Please select your category" : null,
+      ),
     );
   }
 
