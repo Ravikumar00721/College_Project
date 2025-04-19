@@ -29,76 +29,82 @@ class ProfileNotifier extends StateNotifier<ProfileModel?> {
 
   ProfileNotifier(this._authService, this._storageService) : super(null);
 
-  // ✅ Fetch Profile from Firestore
-  Future<void> loadUserProfile(String email) async {
-    print("📥 Fetching user profile for: $email");
+  // Updated to use UID instead of email
+  Future<void> loadUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    ProfileModel? profile = await _authService.getUserProfile(email);
+    print("📥 Fetching user profile for UID: ${user.uid}");
+
+    ProfileModel? profile = await _authService.getUserById(user.uid);
     if (profile != null) {
       print("✅ Profile loaded successfully.");
     } else {
-      print("❌ Error: Profile not found for email: $email");
+      print("❌ Error: Profile not found for UID: ${user.uid}");
     }
 
     state = profile;
   }
 
   Future<void> updateProfile(ProfileModel updatedProfile) async {
-    print("🔄 Updating user profile in Firestore...");
-
     try {
+      print("🔄 Updating profile for UID: ${updatedProfile.userId}");
       await _authService.saveUserProfile(updatedProfile);
-      state = updatedProfile; // ✅ Update Riverpod state
-      print("✅ Profile updated successfully in Firestore.");
+      state = updatedProfile;
+      print("✅ Profile updated successfully");
     } catch (e) {
-      print("🔥 Error updating profile in Firestore: $e");
+      print("🔥 Error updating profile: $e");
+      throw Exception("Failed to update profile");
     }
   }
 
   Future<String?> uploadProfileImage(File imageFile) async {
-    print("📸 Starting image upload...");
-
-    if (!imageFile.existsSync()) {
-      print("❌ Error: File does not exist at path: ${imageFile.path}");
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print("❌ No authenticated user");
       return null;
     }
 
-    // ✅ Upload image and get URL
-    String? imageUrl = await _storageService.uploadProfileImage(imageFile);
+    try {
+      print("📸 Starting image upload for UID: ${user.uid}");
 
-    if (imageUrl != null) {
-      print("✅ Image uploaded successfully: $imageUrl");
+      // 1. Upload image to storage
+      final imageUrl = await _storageService.uploadProfileImage(imageFile);
 
-      if (state == null) {
-        print("⚠️ Warning: `state` is null, fetching user profile first...");
-        User? user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          await loadUserProfile(user.email!);
-        }
+      if (imageUrl == null) {
+        print("❌ Failed to get image URL");
+        return null;
       }
 
-      if (state != null) {
-        ProfileModel updatedProfile =
-            state!.copyWith(profileImagePath: imageUrl);
-        await updateProfile(updatedProfile);
-        print("✅ Profile updated with new image URL.");
+      // 2. Update profile with new image URL
+      final currentProfile = state ??
+          ProfileModel(
+            userId: user.uid,
+            email: user.email ?? "",
+            fullName: user.displayName ?? "New User",
+          );
 
-        return imageUrl; // ✅ Return the new image URL
-      } else {
-        print("❌ Error: Profile state is still null after fetching.");
-      }
-    } else {
-      print("❌ Error: Image URL is null.");
+      final updatedProfile =
+          currentProfile.copyWith(profileImagePath: imageUrl);
+
+      await updateProfile(updatedProfile);
+      print("✅ Image updated successfully");
+      return imageUrl;
+    } catch (e) {
+      print("🔥 Error uploading image: $e");
+      return null;
     }
-
-    return null;
   }
 
-  // ✅ Sign Out User
   Future<void> signOut() async {
-    print("🚪 Signing out user...");
-    await _authService.signOut();
-    state = null;
-    print("✅ User signed out.");
+    try {
+      print("🚪 Signing out user");
+      await _authService.signOut();
+      state = null;
+      print("✅ Sign out successful");
+    } catch (e) {
+      print("🔥 Error signing out: $e");
+      throw Exception("Sign out failed");
+    }
   }
 }

@@ -1,4 +1,5 @@
 class ProfileModel {
+  String userId; // 👈 Add this
   String fullName;
   String dateOfBirth;
   String gender;
@@ -11,6 +12,7 @@ class ProfileModel {
   String selectedCategory;
 
   ProfileModel({
+    this.userId = "", // 👈 Default value
     this.fullName = "Guest User",
     this.dateOfBirth = "01 Jan 2000",
     this.gender = "Male",
@@ -23,7 +25,6 @@ class ProfileModel {
     this.selectedCategory = "",
   });
 
-  // ✅ Convert to Map (for Firestore)
   Map<String, dynamic> toMap() {
     return {
       "fullName": fullName,
@@ -39,9 +40,9 @@ class ProfileModel {
     };
   }
 
-  // ✅ Create ProfileModel from Map (for Firestore)
-  factory ProfileModel.fromMap(Map<String, dynamic>? map) {
+  factory ProfileModel.fromMap(String documentId, Map<String, dynamic>? map) {
     return ProfileModel(
+      userId: documentId, // Use Firestore document ID as userId
       fullName: map?["fullName"] ?? "Guest User",
       dateOfBirth: map?["dateOfBirth"] ?? "01 Jan 2000",
       gender: map?["gender"] ?? "Male",
@@ -55,8 +56,8 @@ class ProfileModel {
     );
   }
 
-  // ✅ Add `copyWith` method to update fields
   ProfileModel copyWith({
+    String? userId,
     String? fullName,
     String? dateOfBirth,
     String? gender,
@@ -67,10 +68,9 @@ class ProfileModel {
     String? phoneNumber,
     String? profileImagePath,
     String? selectedCategory,
-    String? selectedSubCategory,
-    String? selectedSubject,
   }) {
     return ProfileModel(
+      userId: userId ?? this.userId,
       fullName: fullName ?? this.fullName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,

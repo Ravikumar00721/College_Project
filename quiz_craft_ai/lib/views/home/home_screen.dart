@@ -191,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? selectedSubject;
   List<String> subCategoryOptions = [];
   List<String> subjectOptions = [];
+  bool _showBlockingOverlay = true;
 
   @override
   void initState() {
@@ -208,40 +209,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _fetchUserProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      setState(() => email = user!.email ?? "user@example.com");
+      setState(() => email = user.email ?? "user@example.com");
       try {
+        // Use UID instead of email
         DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection("users")
-            .doc(email)
+            .doc(user.uid) // Changed to user.uid
             .get();
 
         if (doc.exists) {
           final profileData = doc.data() as Map<String, dynamic>;
           setState(() {
             _profileExists = true;
-
-            // ✅ Fetch full name
             fullName = profileData['fullName']?.toString() ?? "Guest User";
-
-            // ✅ Fetch profile image if available
             profileImage = profileData['profileImagePath']?.toString() ?? "";
-
-            // ✅ Fetch and initialize category
             selectedCategory =
                 profileData['selectedCategory']?.toString() ?? '';
 
-            // ✅ Initialize subcategories if category exists
-            if (selectedCategory != null && selectedCategory!.isNotEmpty) {
+            if (selectedCategory!.isNotEmpty) {
               subCategoryOptions = _getSubCategories(selectedCategory!);
             }
+            _showBlockingOverlay = false;
+          });
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showCreateProfileBottomSheet().then((_) {
+              setState(() => _showBlockingOverlay = false);
+            });
           });
         }
       } catch (e) {
+        setState(() => _showBlockingOverlay = false);
         print("Error fetching profile: $e");
       }
 
-      if (!_profileExists && !_profileDialogShown) {
+      // Add null check for user.uid
+      if (!_profileExists && !_profileDialogShown && user.uid.isNotEmpty) {
         WidgetsBinding.instance
             .addPostFrameCallback((_) => _showCreateProfileBottomSheet());
       }
@@ -253,15 +258,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     bool? result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      enableDrag: false, // Disable swipe-down dismissal
-      isDismissible: false, // Disable tapping outside dismissal
+      enableDrag: false,
+      isDismissible: false,
       barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => WillPopScope(
-        onWillPop: () async => false, // Disable back button dismissal
+        onWillPop: () async => false,
         child: CreateProfileBottomSheet(),
       ),
     );
 
+    setState(() => _showBlockingOverlay = false);
     if (result == true) {
       setState(() => _profileExists = true);
       _fetchUserProfile();
@@ -272,42 +278,114 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
-        // This will make the whole Scaffold rebuild when theme changes
         final themeMode = ref.watch(themeProvider);
         final isDarkMode = ref.watch(themeProvider.notifier).isDarkMode;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('QuizCraft AI',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white)),
-            centerTitle: true,
-            backgroundColor: AppColors.primary,
-            elevation: 0,
-            iconTheme: IconThemeData(color: Colors.white),
-            actions: [
-              IconButton(
-                icon: AnimatedSwitcher(
-                  duration: Duration(milliseconds: 300),
-                  child: Icon(
-                    isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
-                    key: ValueKey<bool>(isDarkMode),
-                    color: Colors.white,
-                  ),
-                ),
-                onPressed: () {
-                  ref.read(themeProvider.notifier).toggleTheme();
-                },
+        return Stack(
+          children: [
+            // Main Content
+            _buildMainContent(ref, themeMode, isDarkMode),
+
+            // Blocking Overlay
+            if (_showBlockingOverlay)
+              ModalBarrier(
+                color: Colors.black.withOpacity(0.3),
+                dismissible: false,
               ),
-            ],
-          ),
-          drawer: _buildDrawer(),
-          body: _buildContent(),
-          resizeToAvoidBottomInset: true,
+
+            // Progress Indicator
+            if (_showBlockingOverlay)
+              Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildMainContent(
+      WidgetRef ref, ThemeMode themeMode, bool isDarkMode) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('QuizCraft AI',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white)),
+        centerTitle: true,
+        backgroundColor: AppColors.primary,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: AnimatedSwitcher(
+              duration: Duration(milliseconds: 300),
+              child: Icon(
+                isDarkMode ? Icons.nightlight_round : Icons.wb_sunny,
+                key: ValueKey<bool>(isDarkMode),
+                color: Colors.white,
+              ),
+            ),
+            onPressed: () {
+              ref.read(themeProvider.notifier).toggleTheme();
+            },
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(24).copyWith(bottom: 100),
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 100,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildCategorySection(),
+                              const SizedBox(height: 10),
+                              _buildUploadSection(),
+                              const SizedBox(height: 10),
+                              _buildTextInputSection(),
+                              const SizedBox(height: 10),
+                              _buildInputSourceMessage(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: _buildBottomActionBar(),
+              ),
+            ],
+          );
+        },
+      ),
+      resizeToAvoidBottomInset: true,
     );
   }
 
@@ -332,48 +410,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return subCategoryData.cast<String>();
     }
     return [];
-  }
-
-  Widget _buildTextInputSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Enter Content',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[800])),
-        SizedBox(height: 16),
-        Container(
-          constraints: BoxConstraints(
-            minHeight: 120, // Reduced from 150
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextField(
-            controller: _textController,
-            maxLines: null,
-            expands: true,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: InputDecoration(
-              hintText: 'Paste or type your content here...',
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-            onChanged: (value) => setState(() {
-              if (value.isNotEmpty) {
-                _selectedInputSource = 'text';
-              } else {
-                _selectedInputSource = null;
-              }
-            }),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildDrawer() {
@@ -557,58 +593,105 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  final ScrollController _textScrollController = ScrollController();
+
+  Widget _buildTextInputSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Enter Content',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 5),
+        SizedBox(
+          height: 230,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Scrollbar(
+              thumbVisibility: true,
+              controller: _textScrollController,
+              child: TextField(
+                controller: _textController,
+                scrollController: _textScrollController,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                keyboardType: TextInputType.multiline,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: const InputDecoration(
+                  hintText: 'Paste or type your content here...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(12),
+                ),
+                onChanged: (value) => setState(() {
+                  _selectedInputSource = value.isNotEmpty ? 'text' : null;
+                }),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildContent() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-
-        return Column(
+        return Stack(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(24),
-                physics: isKeyboardOpen
-                    ? const AlwaysScrollableScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Add category dropdowns first
-                              _buildCategorySection(),
-                              SizedBox(height: 24),
-                              _buildUploadSection(),
-                              SizedBox(height: 24),
-                              _buildTextInputSection(),
-                              SizedBox(height: 24),
-                              _buildInputSourceMessage(),
-                            ],
-                          ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(24).copyWith(bottom: 100),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 100,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: LayoutBuilder(
+                          builder: (context, cardConstraints) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildCategorySection(),
+                                const SizedBox(height: 10),
+                                _buildUploadSection(),
+                                const SizedBox(height: 10),
+                                _buildTextInputSection(),
+                                const SizedBox(height: 10),
+                                _buildInputSourceMessage(),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                      // Keyboard spacer
-                      SizedBox(height: isKeyboardOpen ? 80 : 0),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            _buildBottomActionBar(),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildBottomActionBar(),
+            ),
           ],
         );
       },
@@ -855,42 +938,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildBottomActionBar() {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 100),
-      padding: EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 16,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          )
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
+    return Consumer(
+      builder: (context, ref, _) {
+        final isDarkMode = ref.watch(themeProvider.notifier).isDarkMode;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          decoration: BoxDecoration(
+            // Remove background color to make it transparent
+            color: Colors.transparent,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              )
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.auto_awesome_outlined, size: 24),
+                label: const Text(
+                  'Generate Quiz Questions',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                  shadowColor: AppColors.primary.withOpacity(0.3),
                 ),
                 onPressed: _handleGeneratePress,
-                child: Text('Generate Quiz Questions',
-                    style: TextStyle(fontSize: 16, color: Colors.white)),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

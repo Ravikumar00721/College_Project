@@ -40,7 +40,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     try {
       DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection("users")
-          .doc(user.email)
+          .doc(user.uid) // Changed from user.email
           .get();
 
       if (doc.exists) {

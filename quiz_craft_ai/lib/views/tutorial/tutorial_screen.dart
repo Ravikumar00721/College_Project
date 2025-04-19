@@ -59,6 +59,7 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white, // Set white background
       body: SafeArea(
         child: Column(
           children: [
@@ -104,14 +105,11 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
                 },
               ),
             ),
-
-            // Page Indicator & Navigation Buttons
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Skip Button (Hidden on last page)
                   _currentPage < walkthroughData.length - 1
                       ? TextButton(
                           onPressed: _skipTutorial,
@@ -124,9 +122,7 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
                             ),
                           ),
                         )
-                      : SizedBox(width: 60), // Keeps layout aligned
-
-                  // Page Indicator
+                      : SizedBox(width: 60),
                   SmoothPageIndicator(
                     controller: _controller,
                     count: walkthroughData.length,
@@ -136,8 +132,6 @@ class _WalkthroughScreenState extends State<WalkthroughScreen> {
                       dotWidth: 8,
                     ),
                   ),
-
-                  // Next or Get Started Button
                   TextButton(
                     onPressed: _nextPage,
                     child: Text(

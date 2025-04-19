@@ -77,78 +77,92 @@ class _LoginInPageState extends State<LoginInPage> {
     final isDarkMode = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDarkMode
-                ? [Colors.blueGrey.shade900, Colors.blueGrey.shade800]
-                : [Colors.blue.shade200, Colors.blue.shade100],
-          ),
-        ),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 60),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: [Colors.blue.shade400, Colors.blue.shade700],
-                    ).createShader(bounds),
-                    child: const Icon(
-                      Icons.lock,
-                      size: 80,
-                      color: Colors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Container(
+            height: constraints.maxHeight,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDarkMode
+                    ? [Colors.blueGrey.shade900, Colors.blueGrey.shade800]
+                    : [Colors.blue.shade200, Colors.blue.shade100],
+              ),
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 60),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => LinearGradient(
+                              colors: [
+                                Colors.blue.shade400,
+                                Colors.blue.shade700
+                              ],
+                            ).createShader(bounds),
+                            child: const Icon(
+                              Icons.lock,
+                              size: 80,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        Text(
+                          "Welcome Back",
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onBackground,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Please sign in to continue",
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color:
+                                theme.colorScheme.onBackground.withOpacity(0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        _buildEmailField(theme),
+                        const SizedBox(height: 20),
+                        _buildPasswordField(theme),
+                        const SizedBox(height: 24),
+                        _buildLoginButton(theme),
+                        const SizedBox(height: 20),
+                        _buildSocialLoginSection(theme),
+                        const Spacer(), // Push content to center
+                        _buildSignupPrompt(theme),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
-                Text(
-                  "Welcome Back",
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onBackground,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Please sign in to continue",
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onBackground.withOpacity(0.8),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                _buildEmailField(theme),
-                const SizedBox(height: 20),
-                _buildPasswordField(theme),
-                const SizedBox(height: 24),
-                _buildLoginButton(theme),
-                const SizedBox(height: 20),
-                _buildSocialLoginSection(theme),
-                const SizedBox(height: 30),
-                _buildSignupPrompt(theme),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

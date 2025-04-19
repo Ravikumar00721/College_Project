@@ -26,57 +26,57 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-      theme: _buildLightTheme(),
-      darkTheme: _buildDarkTheme(),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeMode,
     );
   }
 
-  ThemeData _buildLightTheme() {
+  ThemeData _buildTheme(Brightness brightness) {
     return ThemeData(
-      brightness: Brightness.light,
-      primaryColor: AppColors.primary,
-      colorScheme: ColorScheme.light(
-        primary: AppColors.primary,
-        secondary: AppColors.secondary,
-        background: AppColors.background,
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: brightness,
+        primary: brightness == Brightness.light
+            ? AppColors.primary
+            : AppColors.darkPrimary,
+        secondary: brightness == Brightness.light
+            ? AppColors.secondary
+            : AppColors.darkSecondary,
+        background: brightness == Brightness.light
+            ? AppColors.background
+            : AppColors.darkBackground,
       ),
-      scaffoldBackgroundColor: AppColors.background,
       textTheme: TextTheme(
-        bodyLarge: TextStyle(color: AppColors.textPrimary),
-        bodyMedium: TextStyle(color: AppColors.textPrimary),
+        bodyLarge: TextStyle(
+          color: brightness == Brightness.light
+              ? AppColors.textPrimary
+              : AppColors.darkTextPrimary,
+        ),
+        bodyMedium: TextStyle(
+          color: brightness == Brightness.light
+              ? AppColors.textSecondary
+              : AppColors.darkTextSecondary,
+        ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.primary,
+        backgroundColor: brightness == Brightness.light
+            ? AppColors.primary
+            : AppColors.darkPrimary,
         titleTextStyle: TextStyle(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
-    );
-  }
-
-  ThemeData _buildDarkTheme() {
-    return ThemeData(
-      brightness: Brightness.dark,
-      primaryColor: Colors.blueGrey[800],
-      colorScheme: ColorScheme.dark(
-        primary: Colors.blueGrey[800]!,
-        secondary: Colors.blueGrey[600]!,
-        background: Colors.grey[900]!,
-      ),
-      scaffoldBackgroundColor: Colors.grey[900],
-      textTheme: TextTheme(
-        bodyLarge: TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Colors.white70),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.blueGrey[900],
-        titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor:
+            brightness == Brightness.light ? Colors.white : Colors.grey[800],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
         ),
       ),
     );

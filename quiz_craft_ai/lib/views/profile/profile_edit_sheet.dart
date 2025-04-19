@@ -53,12 +53,13 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
     try {
       DocumentSnapshot doc = await FirebaseFirestore.instance
           .collection("users")
-          .doc(user.email)
+          .doc(user.uid)
           .get();
 
       if (doc.exists) {
-        final profile =
-            ProfileModel.fromMap(doc.data() as Map<String, dynamic>);
+        final profile = ProfileModel.fromMap(
+            doc.id, // Pass document ID
+            doc.data() as Map<String, dynamic>);
         setState(() {
           nameController.text = profile.fullName;
           dobController.text = profile.dateOfBirth;
@@ -87,7 +88,7 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
       try {
         DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection("users")
-            .doc(user.email)
+            .doc(user.uid) // Changed from user.email
             .get();
 
         String existingImagePath = doc.exists
@@ -109,7 +110,7 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
 
         await FirebaseFirestore.instance
             .collection("users")
-            .doc(user.email)
+            .doc(user.uid) // Changed from user.email
             .set(updatedProfile.toMap(), SetOptions(merge: true));
 
         widget.onUpdate();

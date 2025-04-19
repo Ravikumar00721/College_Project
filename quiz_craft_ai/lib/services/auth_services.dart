@@ -111,25 +111,30 @@ class AuthService {
 
   Future<void> saveUserProfile(ProfileModel profile) async {
     try {
-      await _firestore.collection("users").doc(profile.email).set(
-            profile.toMap(),
-            SetOptions(
-                merge: true), // ✅ Merge existing data instead of overwriting
-          );
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      // Use Firebase UID as document ID and set userId field
+      await _firestore.collection("users").doc(user.uid).set({
+        ...profile.toMap(),
+        "userId": user.uid, // Add UID to document data
+      }, SetOptions(merge: true));
+
       print("✅ User profile saved successfully in Firestore.");
     } catch (e) {
       print("🔥 Error saving profile: $e");
     }
   }
 
-  // 🔹 Get User Profile from Firestore
-  Future<ProfileModel?> getUserProfile(String email) async {
+  Future<ProfileModel?> getUserProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
     DocumentSnapshot doc =
-        await _firestore.collection("users").doc(email).get();
-    if (doc.exists) {
-      return ProfileModel.fromMap(doc.data() as Map<String, dynamic>);
-    }
-    return null;
+        await _firestore.collection("users").doc(user.uid).get();
+    return doc.exists
+        ? ProfileModel.fromMap(doc.id, doc.data() as Map<String, dynamic>)
+        : null;
   }
 
   Future<void> saveQuizResult({
@@ -181,8 +186,10 @@ class AuthService {
     try {
       DocumentSnapshot doc =
           await _firestore.collection('users').doc(userId).get();
+
       return doc.exists
-          ? ProfileModel.fromMap(doc.data() as Map<String, dynamic>)
+          ? ProfileModel.fromMap(
+              doc.id, doc.data() as Map<String, dynamic>) // Add doc.id
           : null;
     } catch (e) {
       print("Error fetching user: $e");
