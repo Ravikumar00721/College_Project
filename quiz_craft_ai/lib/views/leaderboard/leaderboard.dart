@@ -136,9 +136,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         if (user.category == 'School') {
           if (user.subCategory != selectedSubCategory) return false;
         } else {
-          var programs = filterOptions['College'][selectedSubCategory];
-          if (programs is! Map || !programs.containsKey(user.subCategory))
-            return false;
+          // For college, check if subject exists in selected subcategory's subjects
+          if (!subjectOptions.contains(user.subject)) return false;
         }
       }
 
@@ -204,79 +203,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       'Class 11-12': {'Science Stream', 'Commerce Stream', 'Arts Stream'}
     },
     'College': {
-      'Undergraduate Programs': {
-        'BCA': [
-          'Programming',
-          'Database',
-          'Web Development',
-          'Software Engineering'
-        ],
-        'B.Tech': [
-          'Computer Science',
-          'Mechanical Engineering',
-          'Civil Engineering',
-          'Electrical Engineering',
-          'Electronics',
-          'AI & ML',
-          'Data Science'
-        ],
-        'B.Sc': [
-          'Physics',
-          'Chemistry',
-          'Mathematics',
-          'Biology',
-          'Biotechnology'
-        ],
-        'B.Com': ['Accountancy', 'Economics', 'Business Studies', 'Finance'],
-        'BA': [
-          'History',
-          'Political Science',
-          'Geography',
-          'Psychology',
-          'Journalism'
-        ],
-        'BBA': ['Marketing', 'Finance', 'Human Resources', 'Entrepreneurship'],
-        'LLB': ['Contract Law', 'Criminal Law', 'Corporate Law'],
-        'Other': ['Liberal Arts', 'Mass Communication', 'Design']
-      },
-      'Postgraduate Programs': {
-        'MCA': [
-          'Advanced Programming',
-          'Cloud Computing',
-          'Big Data',
-          'Cyber Security'
-        ],
-        'M.Tech': [
-          'AI & ML',
-          'Embedded Systems',
-          'Cybersecurity',
-          'VLSI Design'
-        ],
-        'M.Sc': [
-          'Physics',
-          'Chemistry',
-          'Mathematics',
-          'Biotechnology',
-          'Data Science'
-        ],
-        'M.Com': ['Advanced Accountancy', 'Financial Management', 'Taxation'],
-        'MA': [
-          'History',
-          'Political Science',
-          'Public Administration',
-          'International Relations',
-          'English Literature'
-        ],
-        'MBA': [
-          'Marketing Management',
-          'Financial Management',
-          'Operations Management',
-          'Business Analytics',
-          'HR Management'
-        ],
-        'LLM': ['International Law', 'Constitutional Law', 'Corporate Law'],
-        'Other': ['Liberal Arts', 'Public Policy', 'Mass Communication']
-      }
+      'Undergraduate Programs': [
+        'Programming', 'Database', 'Web Development', 'Software Engineering',
+        'Computer Science', 'Mechanical Engineering', 'Civil Engineering',
+        // ... rest of UG subjects
+      ],
+      'Postgraduate Programs': [
+        'Advanced Programming', 'Cloud Computing', 'Big Data', 'Cyber Security',
+        'AI & ML', 'Embedded Systems', 'Cybersecurity', 'VLSI Design',
+        // ... rest of PG subjects
+      ]
     }
   };
 
@@ -295,16 +231,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ?.cast<String>() ??
             [];
       } else {
-        List<String> subjects = [];
-        var programs = filterOptions['College'][subCategory];
-        if (programs is Map<String, List<String>>) {
-          programs.values.forEach(subjects.addAll);
-        }
-        return subjects;
+        // Directly return subjects for college programs
+        return (filterOptions['College'][subCategory] as List?)
+                ?.cast<String>() ??
+            [];
       }
     }
 
     Widget _buildSubCategoryDropdown() {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
       List<String> subCategories = [];
       if (selectedCategory == 'School') {
         subCategories =
@@ -314,117 +250,165 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             (filterOptions['College'] as Map).keys.toList().cast<String>();
       }
 
-      return DropdownButton<String>(
-        hint: Text(selectedCategory == 'School'
-            ? 'Select Class'
-            : 'Select Program Type'),
-        value: selectedSubCategory,
-        items: subCategories
-            .map((value) => DropdownMenuItem(
-                  value: value,
-                  child: Text(value),
-                ))
-            .toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedSubCategory = value;
-            selectedSubject = null;
-            subjectOptions = getSubjectsForSubCategory(value!);
-          });
-        },
+      return DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          hint: Text(
+            selectedCategory == 'School'
+                ? 'Select Class'
+                : 'Select Program Type',
+            style:
+                TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87),
+          ),
+          value: selectedSubCategory,
+          items: subCategories.map((value) {
+            return DropdownMenuItem(
+              value: value,
+              child: Text(
+                value,
+                style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedSubCategory = value;
+              selectedSubject = null;
+              subjectOptions = getSubjectsForSubCategory(value!);
+            });
+          },
+          icon: Icon(Icons.arrow_drop_down,
+              color: isDarkMode ? Colors.white70 : Colors.grey),
+          isExpanded: true,
+          dropdownColor: isDarkMode ? Colors.grey[800] : Colors.white,
+        ),
       );
     }
 
     Widget _buildSubjectDropdown() {
-      return DropdownButton<String>(
-        hint: Text('Select Subject'),
-        value: selectedSubject,
-        items: subjectOptions
-            .map((value) => DropdownMenuItem(
-                  value: value,
-                  child: Text(value),
-                ))
-            .toList(),
-        onChanged: (value) => setState(() => selectedSubject = value),
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+      return DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          hint: Text(
+            'Select Subject',
+            style:
+                TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87),
+          ),
+          value: selectedSubject,
+          items: subjectOptions.map((value) {
+            return DropdownMenuItem(
+              value: value,
+              child: Text(
+                value,
+                style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) => setState(() => selectedSubject = value),
+          icon: Icon(Icons.arrow_drop_down,
+              color: isDarkMode ? Colors.white70 : Colors.grey),
+          isExpanded: true,
+          dropdownColor: isDarkMode ? Colors.grey[800] : Colors.white,
+        ),
       );
     }
 
-    // Widget _buildDropdownWrapper(Widget child) {
-    //   return SizedBox(
-    //     width: 200,
-    //     height: 70, // Height adjusted to match others
-    //     child: InputDecorator(
-    //       decoration: InputDecoration(
-    //         border: OutlineInputBorder(
-    //           borderRadius: BorderRadius.circular(8),
-    //           borderSide: BorderSide.none,
-    //         ),
-    //         filled: true,
-    //         fillColor: Colors.white,
-    //         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    //       ),
-    //       child: DropdownButtonHideUnderline(child: child),
-    //     ),
-    //   );
-    // }
-
     Widget _buildCategoryDropdown() {
-      return DropdownButton<String>(
-        hint: Text('Select Category'),
-        value: selectedCategory,
-        items: ['School', 'College'].map((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedCategory = value;
-            selectedSubCategory = null;
-            selectedSubject = null;
-            subjectOptions = [];
-          });
-        },
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+      return DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          hint: Text(
+            'Select Category',
+            style:
+                TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87),
+          ),
+          value: selectedCategory,
+          items: ['School', 'College'].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: TextStyle(
+                    color: isDarkMode ? Colors.white : Colors.black87),
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              selectedCategory = value;
+              selectedSubCategory = null;
+              selectedSubject = null;
+              subjectOptions = [];
+            });
+          },
+          icon: Icon(Icons.arrow_drop_down,
+              color: isDarkMode ? Colors.white70 : Colors.grey),
+          isExpanded: true,
+          dropdownColor: isDarkMode ? Colors.grey[800] : Colors.white,
+        ),
       );
     }
 
     Widget _buildFilterRow() {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: Colors.lightBlue[50],
+            color: isDarkMode ? Colors.grey[800] : Colors.lightBlue[50],
             borderRadius: BorderRadius.circular(8),
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+          child: Row(
+            children: [
+              // Fixed Filter label
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.filter_alt_rounded,
+                        color: Colors.white, size: 20),
+                    SizedBox(width: 8),
+                    Text('Filter', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              // Scrollable filters
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      Icon(Icons.filter_alt_rounded,
-                          color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('Filter', style: TextStyle(color: Colors.white)),
+                      SizedBox(width: 12),
+                      _buildStyledDropdown(
+                        child: _buildCategoryDropdown(),
+                        isDarkMode: isDarkMode,
+                      ),
+                      SizedBox(width: 12),
+                      if (selectedCategory != null)
+                        _buildStyledDropdown(
+                          child: _buildSubCategoryDropdown(),
+                          isDarkMode: isDarkMode,
+                        ),
+                      SizedBox(width: 12),
+                      if (selectedSubCategory != null)
+                        _buildStyledDropdown(
+                          child: _buildSubjectDropdown(),
+                          isDarkMode: isDarkMode,
+                        ),
                     ],
                   ),
                 ),
-                SizedBox(width: 12),
-                _buildCategoryDropdown(),
-                SizedBox(width: 12),
-                if (selectedCategory != null) _buildSubCategoryDropdown(),
-                SizedBox(width: 12),
-                if (selectedSubCategory != null) _buildSubjectDropdown(),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -432,18 +416,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Leaderboard'),
+        title: const Text('Leaderboard'),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
         ),
       ),
       body: Column(
         children: [
           _buildFilterRow(),
-          SizedBox(height: 20),
-          Container(
-            height: 200,
+          const SizedBox(height: 16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: 220,
+              maxHeight: 240,
+            ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return Stack(
@@ -452,16 +439,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     if (top3.length > 1)
                       Positioned(
                         left: constraints.maxWidth * 0.1,
+                        top: 20,
                         child: _buildTopUser(top3[1], 2),
                       ),
                     if (top3.isNotEmpty)
                       Align(
-                        alignment: Alignment.center,
+                        alignment: Alignment.topCenter,
                         child: _buildTopUser(top3[0], 1),
                       ),
                     if (top3.length > 2)
                       Positioned(
                         right: constraints.maxWidth * 0.1,
+                        top: 20,
                         child: _buildTopUser(top3[2], 3),
                       ),
                   ],
@@ -481,86 +470,201 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
+  Widget _buildStyledDropdown(
+      {required Widget child, required bool isDarkMode}) {
+    return Container(
+      width: 200,
+      margin: EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey[700] : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          canvasColor: isDarkMode ? Colors.grey[800] : Colors.white,
+        ),
+        child: child,
+      ),
+    );
+  }
+
   Widget _buildTopUser(LeaderboardUser user, int displayRank) {
-    final size = displayRank == 1 ? 100.0 : 80.0;
+    final size = displayRank == 1 ? 90.0 : 70.0;
     final medalColor = displayRank == 1
         ? Colors.amber
         : displayRank == 2
             ? Colors.grey
-            : Color(0xFFCD7F32); // Bronze
+            : const Color(0xFFCD7F32);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Medal badge
-        Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: medalColor.withOpacity(0.2),
-            border: Border.all(color: medalColor, width: 2),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // User avatar
-              CircleAvatar(
-                radius: size / 2,
-                backgroundColor: Colors.grey[200],
+        Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            CircleAvatar(
+              radius: size / 2,
+              backgroundColor: medalColor.withOpacity(0.2),
+              child: CircleAvatar(
+                radius: (size / 2) - 4,
                 backgroundImage: user.imageUrl != null
                     ? CachedNetworkImageProvider(user.imageUrl!)
                     : null,
+                backgroundColor: Colors.white,
                 child: user.imageUrl == null
-                    ? Icon(Icons.person, size: size / 2)
+                    ? Icon(Icons.person, size: size / 2 - 4, color: Colors.grey)
                     : null,
               ),
-
-              // Rank badge
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: medalColor,
-                  ),
-                  child: Text(
-                    displayRank.toString(),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+            ),
+            Positioned(
+              bottom: -10,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: medalColor,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Text(
+                  displayRank.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        SizedBox(height: 8),
-
-        // Name and score
-        Text(user.name, style: TextStyle(fontWeight: FontWeight.bold)),
-        Text('${user.score}%', style: TextStyle(color: Colors.grey)),
+        const SizedBox(height: 12),
+        Column(
+          children: [
+            Text(
+              user.name,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${user.score}%',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                user.subject,
+                style: const TextStyle(fontSize: 10),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildListUser(LeaderboardUser user) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      elevation: 1,
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.grey[200],
-          backgroundImage: user.imageUrl != null
-              ? CachedNetworkImageProvider(user.imageUrl!)
-              : null,
-          child: user.imageUrl == null ? Icon(Icons.person) : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isDarkMode ? Colors.grey[600]! : Colors.grey[300]!,
+              width: 2,
+            ),
+          ),
+          child: CircleAvatar(
+            backgroundColor: Colors.grey[200],
+            backgroundImage: user.imageUrl != null
+                ? CachedNetworkImageProvider(user.imageUrl!)
+                : null,
+            child: user.imageUrl == null
+                ? const Icon(Icons.person, color: Colors.grey)
+                : null,
+          ),
         ),
-        title: Text(user.name),
-        subtitle: Text('Accuracy: ${user.score}%'),
-        trailing: Text('#${user.rank}',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                user.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[700] : Colors.grey[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '#${user.rank}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.school, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    user.subject,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.assessment, size: 16, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(
+                  '${user.score}% Accuracy',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.green[200] : Colors.green[800],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

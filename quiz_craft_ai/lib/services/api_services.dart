@@ -12,7 +12,7 @@ final apiServiceProvider = Provider((ref) => ApiService());
 class ApiService {
   final String baseUrl =
       'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3';
-  final String apiKey = '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';
+  final String apiKey = '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';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<QuizModel>> fetchProcessedText(String documentId) async {

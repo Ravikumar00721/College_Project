@@ -700,6 +700,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // 2. Update the category section display
   Widget _buildCategorySection() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -707,13 +709,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey[800])),
+                color: isDarkMode ? Colors.white : Colors.grey[800])),
         SizedBox(height: 16),
         Container(
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
+            color: isDarkMode ? Colors.grey[800] : null,
           ),
           child: Column(
             children: [
@@ -724,7 +727,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey[700])),
+                          color:
+                              isDarkMode ? Colors.white70 : Colors.grey[700])),
                 ),
               _buildCategoryDropdowns(),
               SizedBox(height: 12),
@@ -732,7 +736,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   'Selected: ${selectedCategory ?? 'None'} → '
                   '${selectedSubCategory ?? 'None'} → '
                   '${selectedSubject ?? 'None'}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  style: TextStyle(
+                      color: isDarkMode ? Colors.white60 : Colors.grey[600],
+                      fontSize: 14)),
             ],
           ),
         ),
@@ -740,8 +746,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-// 3. Simplified dropdown builder
   Widget _buildCategoryDropdowns() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         if (selectedCategory != null && selectedCategory!.isNotEmpty) ...[
@@ -756,6 +763,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 subjectOptions = _getSubjects(selectedCategory!, newValue!);
               });
             },
+            isDarkMode: isDarkMode, // Pass the theme information
           ),
           SizedBox(height: 12),
           if (selectedSubCategory != null)
@@ -765,6 +773,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               items: subjectOptions,
               onChanged: (newValue) =>
                   setState(() => selectedSubject = newValue),
+              isDarkMode: isDarkMode, // Pass the theme information
             ),
         ],
       ],
@@ -783,15 +792,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required String label,
     required List<String> items,
     required Function(String?) onChanged,
+    required bool isDarkMode, // Add this parameter
   }) {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(
+          color: isDarkMode ? Colors.white70 : Colors.grey[700],
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey[300]!),
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        filled: isDarkMode,
+        fillColor: isDarkMode ? Colors.grey[800] : null,
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -801,11 +816,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             return DropdownMenuItem(
               value: value,
               child: Text(value,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[800])),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDarkMode ? Colors.white : Colors.grey[800],
+                  )),
             );
           }).toList(),
           onChanged: onChanged,
-          hint: Text('Choose...', style: TextStyle(color: Colors.grey[500])),
+          hint: Text('Choose...',
+              style: TextStyle(
+                color: isDarkMode ? Colors.white70 : Colors.grey[500],
+              )),
+          dropdownColor: isDarkMode ? Colors.grey[800] : Colors.white,
+          icon: Icon(Icons.arrow_drop_down,
+              color: isDarkMode ? Colors.white70 : Colors.grey[500]),
+          style: TextStyle(
+            color: isDarkMode ? Colors.white : Colors.grey[800],
+          ),
         ),
       ),
     );
