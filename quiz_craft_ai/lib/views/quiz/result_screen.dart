@@ -1,9 +1,12 @@
 import 'package:confetti/confetti.dart'; // Add this package to pubspec.yaml
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/quizmodel.dart';
+import '../../providers/home_screen_provider.dart';
+import '../home/home_screen.dart';
 
-class ResultScreen extends StatefulWidget {
+class ResultScreen extends ConsumerStatefulWidget {
   final List<QuizModel> quizzes;
   final int correctAnswers;
   final List<int?> userAnswers;
@@ -16,10 +19,10 @@ class ResultScreen extends StatefulWidget {
   });
 
   @override
-  State<ResultScreen> createState() => _ResultScreenState();
+  ConsumerState<ResultScreen> createState() => _ResultScreenState();
 }
 
-class _ResultScreenState extends State<ResultScreen>
+class _ResultScreenState extends ConsumerState<ResultScreen>
     with SingleTickerProviderStateMixin {
   late ConfettiController _confettiController;
   late AnimationController _animationController;
@@ -246,7 +249,6 @@ class _ResultScreenState extends State<ResultScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // Back to Home Button
                 ElevatedButton.icon(
                   icon: const Icon(Icons.home_rounded),
                   label: const Text('Back to Home'),
@@ -261,9 +263,16 @@ class _ResultScreenState extends State<ResultScreen>
                     elevation: 3,
                   ),
                   onPressed: () {
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    // Clear the state
+                    ref.read(homeScreenProvider.notifier).clearAll();
+
+                    // Use pushReplacement to completely rebuild HomeScreen
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                    );
                   },
-                ),
+                )
               ],
             ),
           ),

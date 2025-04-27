@@ -44,8 +44,18 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           .get();
 
       if (doc.exists) {
+        // Print document ID and raw data
+        print('🔥 Firestore document ID: ${doc.id}');
+        print('📄 Fetched user data: ${doc.data()}');
+
+        // Cast the data and print specific fields
+        final userData = doc.data() as Map<String, dynamic>;
+        print('👤 User UID: ${userData['userId']}');
+        print('🖼️ Profile image path: ${userData['profileImagePath']}');
+        print('📅 Last update: ${userData['updatedAt']}');
+
         setState(() {
-          _userData = doc.data() as Map<String, dynamic>;
+          _userData = userData;
           _isLoading = false;
         });
       } else {
@@ -275,26 +285,27 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                     child: Column(
                       children: [
                         SizedBox(height: 20),
-                        _buildSection(context, "Academic Information", [
-                          // Add this new line for category
+                        // Personal Information Section
+                        _buildSection(context, "Personal Information", [
+                          _buildInfoTile(context, "Date of Birth",
+                              _userData?['dateOfBirth'] ?? "N/A"),
                           _buildInfoTile(
-                              context,
-                              "Category",
-                              _userData?['selectedCategory']?.isNotEmpty == true
-                                  ? _userData!['selectedCategory']
-                                  : "N/A"),
+                              context, "Gender", _userData?['gender'] ?? "N/A"),
+                          _buildInfoTile(
+                              context, "Email", _userData?['email'] ?? "N/A"),
+                          _buildInfoTile(context, "Phone Number",
+                              _userData?['phoneNumber'] ?? "N/A"),
+                        ]),
+                        // Academic Information Section
+                        _buildSection(context, "Academic Information", [
+                          _buildInfoTile(context, "Category",
+                              _userData?['selectedCategory'] ?? "N/A"),
                           _buildInfoTile(context, "Class/Year",
                               _userData?['classYear'] ?? "N/A"),
                           _buildInfoTile(context, "College Name",
                               _userData?['collegeName'] ?? "N/A"),
                           _buildInfoTile(context, "Stream/Major",
                               _userData?['stream'] ?? "N/A"),
-                          _buildInfoTile(context, "Subjects",
-                              _userData?['subjects'] ?? "N/A"),
-                          _buildInfoTile(context, "Study Mode",
-                              _userData?['studyMode'] ?? "N/A"),
-                          _buildInfoTile(context, "Daily Study Goal",
-                              _userData?['dailyGoal'] ?? "N/A"),
                         ]),
                         SizedBox(height: 20),
                       ],

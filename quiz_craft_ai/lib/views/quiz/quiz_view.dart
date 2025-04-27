@@ -31,6 +31,34 @@ class _QuizViewState extends State<QuizView> {
 
   QuizModel get currentQuiz => widget.quizzes[_currentQuestionIndex];
   bool get hasNextQuestion => _currentQuestionIndex < widget.quizzes.length - 1;
+
+  // Add this new method
+  Future<bool> _showExitConfirmation() async {
+    if (!_isAnswerSubmitted && _selectedOptionIndex != null) {
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Exit Quiz?'),
+          content: const Text(
+              'You have unsaved progress. Are you sure you want to leave?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Exit', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      return shouldExit ?? false;
+    }
+    return true;
+  }
+
   Future<void> _finishQuiz() async {
     try {
       setState(() => _isLoading = true);
@@ -89,31 +117,34 @@ class _QuizViewState extends State<QuizView> {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildQuizHeader(),
-            _buildQuestionCount(theme),
-            _buildQuestionCard(theme, isDarkMode),
-            const SizedBox(height: 24),
-            Expanded(
-              child: ListView.separated(
-                itemCount: currentQuiz.options.length,
-                separatorBuilder: (context, index) => Divider(
-                  color: theme.dividerColor,
-                  height: 8,
+    return WillPopScope(
+      onWillPop: _showExitConfirmation,
+      child: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildQuizHeader(),
+              _buildQuestionCount(theme),
+              _buildQuestionCard(theme, isDarkMode),
+              const SizedBox(height: 24),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: currentQuiz.options.length,
+                  separatorBuilder: (context, index) => Divider(
+                    color: theme.dividerColor,
+                    height: 8,
+                  ),
+                  itemBuilder: (context, index) =>
+                      _buildOptionButton(index, theme, isDarkMode),
                 ),
-                itemBuilder: (context, index) =>
-                    _buildOptionButton(index, theme, isDarkMode),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildControlButton(theme),
-            if (_isAnswerSubmitted) _buildResultSection(theme),
-          ],
+              const SizedBox(height: 16),
+              _buildControlButton(theme),
+              if (_isAnswerSubmitted) _buildResultSection(theme),
+            ],
+          ),
         ),
       ),
     );

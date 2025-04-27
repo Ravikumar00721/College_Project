@@ -6,13 +6,27 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import '../models/quizmodel.dart';
+import '../providers/api_key.dart';
 
-final apiServiceProvider = Provider((ref) => ApiService());
+final apiServiceProvider = Provider<ApiService>((ref) {
+  return ApiService(ref);
+});
 
 class ApiService {
   final String baseUrl =
       'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3';
-  final String apiKey = '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';
+  final Ref ref;
+
+  ApiService(this.ref);
+
+  String get apiKey {
+    final apiKey = ref.read(apiKeyProvider);
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('API Key not set. Please set it in the app settings.');
+    }
+    return apiKey;
+  }
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<List<QuizModel>> fetchProcessedText(String documentId) async {

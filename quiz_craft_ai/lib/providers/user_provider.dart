@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,21 +27,32 @@ final profileProvider =
 class ProfileNotifier extends StateNotifier<ProfileModel?> {
   final AuthService _authService;
   final StorageService _storageService;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   ProfileNotifier(this._authService, this._storageService) : super(null);
 
-  // Updated to use UID instead of email
   Future<void> loadUserProfile() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    print("📥 Fetching user profile for UID: ${user.uid}");
-
     ProfileModel? profile = await _authService.getUserById(user.uid);
-    if (profile != null) {
-      print("✅ Profile loaded successfully.");
-    } else {
-      print("❌ Error: Profile not found for UID: ${user.uid}");
+
+    if (profile == null) {
+      // Create a complete profile if none exists
+      profile = ProfileModel(
+        userId: user.uid,
+        email: user.email ?? "",
+        fullName: user.displayName ?? "New User",
+        // Add other default values here
+        dateOfBirth: "",
+        gender: "",
+        collegeName: "",
+        classYear: "",
+        stream: "",
+        phoneNumber: "",
+        profileImagePath: "",
+        selectedCategory: "",
+      );
     }
 
     state = profile;
@@ -60,35 +72,22 @@ class ProfileNotifier extends StateNotifier<ProfileModel?> {
 
   Future<String?> uploadProfileImage(File imageFile) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print("❌ No authenticated user");
-      return null;
-    }
+    if (user == null) return null;
 
     try {
-      print("📸 Starting image upload for UID: ${user.uid}");
-
       // 1. Upload image to storage
       final imageUrl = await _storageService.uploadProfileImage(imageFile);
+      if (imageUrl == null) return null;
 
-      if (imageUrl == null) {
-        print("❌ Failed to get image URL");
-        return null;
-      }
+      // 2. Update ONLY the profile image field in Firestore
+      await _authService.updateProfileField(
+        userId: user.uid,
+        field: 'profileImagePath',
+        value: imageUrl,
+      );
 
-      // 2. Update profile with new image URL
-      final currentProfile = state ??
-          ProfileModel(
-            userId: user.uid,
-            email: user.email ?? "",
-            fullName: user.displayName ?? "New User",
-          );
-
-      final updatedProfile =
-          currentProfile.copyWith(profileImagePath: imageUrl);
-
-      await updateProfile(updatedProfile);
-      print("✅ Image updated successfully");
+      // 3. Update local state
+      state = state?.copyWith(profileImagePath: imageUrl);
       return imageUrl;
     } catch (e) {
       print("🔥 Error uploading image: $e");

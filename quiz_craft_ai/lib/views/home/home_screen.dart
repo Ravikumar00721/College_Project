@@ -8,16 +8,19 @@ import 'package:quiz_craft_ai/services/ocr_services.dart';
 
 import '../../core/themes.dart';
 import '../../models/quizmodel.dart';
+import '../../providers/api_key.dart';
+import '../../providers/home_screen_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/textdata.dart';
 import 'create_profile.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   final AuthService authService = AuthService();
   final FirestoreService firestoreService = FirestoreService();
   final User? user = FirebaseAuth.instance.currentUser;
@@ -182,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isHovered = false;
   String? selectedFileName;
   String? extractedText;
-  late TextEditingController _textController;
+  late final TextEditingController _textController;
   String? _selectedInputSource;
 
   // Add these state variables
@@ -199,12 +202,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _textController = TextEditingController();
     _fetchUserProfile();
+    _syncWithProvider();
+  }
+
+  void _syncWithProvider() {
+    final state = ref.read(homeScreenProvider);
+    _textController.text = state.inputText ?? '';
+    selectedCategory = state.selectedCategory;
+    selectedSubCategory = state.selectedSubCategory;
+    selectedSubject = state.selectedSubject;
+    _selectedInputSource = state.inputSource;
+    subCategoryOptions = state.subCategoryOptions;
+    subjectOptions = state.subjectOptions;
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _textController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -494,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: AnimatedList(
               padding: EdgeInsets.zero,
               initialItemCount:
-                  5, // Reduced count since we removed theme toggle
+                  6, // Reduced count since we removed theme toggle
               itemBuilder: (context, index, animation) {
                 return SlideTransition(
                   position: animation.drive(
@@ -536,12 +551,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           'Leaderboard',
           '/leaderboard',
         );
+      // In your _buildDrawerItem method, add this case:
       case 3:
+        return _drawerItem(
+          Icons.vpn_key_outlined,
+          'API Key Settings',
+          '/api-settings',
+          color: Colors.orange,
+        );
+      case 4: // Move the divider down
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Divider(color: Colors.grey[300], height: 1),
         );
-      case 4:
+      case 5: // Move sign out down
         return _drawerItem(
           Icons.logout_outlined,
           'Sign Out',
@@ -560,8 +583,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
-          if (isSignOut) await authService.signOut();
-          context.go(route);
+          if (title == 'API Key Settings') {
+            Navigator.pop(context); // Close drawer first
+            // Use Consumer to get the correct ref
+            showDialog(
+              context: context,
+              builder: (context) => Consumer(
+                builder: (context, ref, _) {
+                  return _buildApiKeyDialog(ref);
+                },
+              ),
+            );
+          } else if (isSignOut) {
+            await authService.signOut();
+            context.go(route);
+          } else {
+            context.go(route);
+          }
         },
         hoverColor: Colors.grey[100],
         splashColor: AppColors.primary.withOpacity(0.1),
@@ -590,6 +628,71 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         ),
       ),
+    );
+  }
+
+  Widget _buildApiKeyDialog(WidgetRef ref) {
+    final notifier = ref.read(apiKeyProvider.notifier);
+    final currentApiKey = ref.read(apiKeyProvider);
+    final controller = TextEditingController(text: currentApiKey);
+
+    return AlertDialog(
+      title: const Text('Manage API Key'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Enter your Hugging Face API Key:'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: controller,
+            obscureText: true,
+            obscuringCharacter: '•',
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'hf_xxxxxxxxxxxxxxxx',
+              labelText: 'API Key',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            currentApiKey == null
+                ? 'No API key currently set'
+                : 'Using: ${currentApiKey.substring(0, 5)}•••${currentApiKey.substring(currentApiKey.length - 3)}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        if (currentApiKey != null)
+          TextButton(
+            onPressed: () async {
+              await notifier.clearApiKey();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('API Key cleared')),
+              );
+            },
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+          ),
+        ElevatedButton(
+          onPressed: () async {
+            await notifier.setApiKey(controller.text.trim());
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('API Key saved successfully')),
+            );
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 
@@ -631,70 +734,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(12),
                 ),
-                onChanged: (value) => setState(() {
-                  _selectedInputSource = value.isNotEmpty ? 'text' : null;
-                }),
+                onChanged: (value) {
+                  ref.read(homeScreenProvider.notifier).updateInputText(value);
+                  setState(() {
+                    _selectedInputSource = value.isNotEmpty ? 'text' : null;
+                  });
+                },
               ),
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildContent() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.all(24).copyWith(bottom: 100),
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 100,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: LayoutBuilder(
-                          builder: (context, cardConstraints) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildCategorySection(),
-                                const SizedBox(height: 10),
-                                _buildUploadSection(),
-                                const SizedBox(height: 10),
-                                _buildTextInputSection(),
-                                const SizedBox(height: 10),
-                                _buildInputSourceMessage(),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomActionBar(),
-            ),
-          ],
-        );
-      },
     );
   }
 

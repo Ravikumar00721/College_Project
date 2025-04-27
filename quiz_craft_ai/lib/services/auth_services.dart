@@ -126,6 +126,22 @@ class AuthService {
     }
   }
 
+  // In AuthService
+  Future<void> updateProfileField({
+    required String userId,
+    required String field,
+    required dynamic value,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        field: value,
+      });
+    } catch (e) {
+      print("Error updating $field: $e");
+      throw Exception("Field update failed");
+    }
+  }
+
   Future<ProfileModel?> getUserProfile() async {
     final user = _auth.currentUser;
     if (user == null) return null;

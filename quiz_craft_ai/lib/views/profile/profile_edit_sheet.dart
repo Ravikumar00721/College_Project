@@ -198,15 +198,16 @@ class _ProfileEditSheetState extends ConsumerState<ProfileEditSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: DropdownButtonFormField<String>(
-        value: selectedCategory,
+        value: selectedCategory?.toLowerCase(), // Convert to lowercase
         decoration: const InputDecoration(
           labelText: "Category *",
           border: OutlineInputBorder(),
         ),
-        items: const ["School", "College"]
+        items: const ["school", "college"] // Use lowercase values
             .map((category) => DropdownMenuItem(
                   value: category,
-                  child: Text(category),
+                  child:
+                      Text(category[0].toUpperCase() + category.substring(1)),
                 ))
             .toList(),
         onChanged: (value) => setState(() => selectedCategory = value),
