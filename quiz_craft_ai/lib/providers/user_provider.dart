@@ -58,15 +58,17 @@ class ProfileNotifier extends StateNotifier<ProfileModel?> {
     state = profile;
   }
 
-  Future<void> updateProfile(ProfileModel updatedProfile) async {
+  Future<void> updateProfile(ProfileModel profile) async {
     try {
-      print("🔄 Updating profile for UID: ${updatedProfile.userId}");
-      await _authService.saveUserProfile(updatedProfile);
-      state = updatedProfile;
-      print("✅ Profile updated successfully");
+      print('[DEBUG] Writing to Firestore: ${profile.toMap()}');
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(profile.userId)
+          .set(profile.toMap());
+      print('[DEBUG] Firestore write complete');
     } catch (e) {
-      print("🔥 Error updating profile: $e");
-      throw Exception("Failed to update profile");
+      print('[ERROR] Firestore write failed: $e');
+      throw e;
     }
   }
 

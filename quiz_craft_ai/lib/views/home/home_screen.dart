@@ -224,17 +224,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _fetchUserProfile() async {
+    print('[DEBUG] Starting profile fetch');
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() => email = user.email ?? "user@example.com");
       try {
-        // Use UID instead of email
+        print('[DEBUG] Checking Firestore for user profile: ${user.uid}');
         DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection("users")
-            .doc(user.uid) // Changed to user.uid
-            .get();
+            .doc(user.uid)
+            .get(GetOptions(source: Source.server)); // Force server fetch
 
+        print(
+            '[DEBUG] Firestore response: ${doc.exists ? 'EXISTS' : 'MISSING'}');
         if (doc.exists) {
+          print('[DEBUG] Profile found, updating state');
           final profileData = doc.data() as Map<String, dynamic>;
           setState(() {
             _profileExists = true;
@@ -242,28 +246,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             profileImage = profileData['profileImagePath']?.toString() ?? "";
             selectedCategory =
                 profileData['selectedCategory']?.toString() ?? '';
-
+            _showBlockingOverlay = false;
             if (selectedCategory!.isNotEmpty) {
               subCategoryOptions = _getSubCategories(selectedCategory!);
             }
-            _showBlockingOverlay = false;
           });
         } else {
+          print('[DEBUG] Profile missing, showing creation sheet');
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showCreateProfileBottomSheet().then((_) {
+              print('[DEBUG] Profile creation sheet closed');
               setState(() => _showBlockingOverlay = false);
             });
           });
         }
       } catch (e) {
+        print('[ERROR] Profile fetch error: $e');
         setState(() => _showBlockingOverlay = false);
-        print("Error fetching profile: $e");
-      }
-
-      // Add null check for user.uid
-      if (!_profileExists && !_profileDialogShown && user.uid.isNotEmpty) {
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => _showCreateProfileBottomSheet());
       }
     }
   }
@@ -284,8 +283,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     setState(() => _showBlockingOverlay = false);
     if (result == true) {
-      setState(() => _profileExists = true);
-      _fetchUserProfile();
+      _fetchUserProfile(); // Let Firestore fetch determine profile existence
     }
   }
 

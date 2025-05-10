@@ -17,48 +17,35 @@ class BouncingDotsLoader extends StatefulWidget {
 }
 
 class _BouncingDotsLoaderState extends State<BouncingDotsLoader>
-    with TickerProviderStateMixin {
-  late List<AnimationController> _controllers;
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
   late List<Animation<double>> _animations;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimations();
-  }
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    )..repeat(reverse: true);
 
-  void _setupAnimations() {
-    _controllers = List.generate(3, (index) {
-      return AnimationController(
-        vsync: this,
-        duration: widget.duration,
-      )..repeat(reverse: true);
-    });
-
-    _animations = _controllers.map((controller) {
+    _animations = List.generate(3, (index) {
       return Tween(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
-          parent: controller,
-          curve: Curves.easeInOut,
+          parent: _controller,
+          curve: Interval(
+            0.2 * index,
+            0.2 * (index + 1),
+            curve: Curves.easeInOut,
+          ),
         ),
       );
-    }).toList();
-
-    // Stagger the animations
-    Future.delayed(const Duration(milliseconds: 200), () {
-      _controllers[1].forward();
     });
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _controllers[2].forward();
-    });
-    _controllers[0].forward();
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
+    _controller.dispose();
     super.dispose();
   }
 

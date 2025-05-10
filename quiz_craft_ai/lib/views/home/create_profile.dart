@@ -51,12 +51,14 @@ class _CreateProfileBottomSheetState
 
   Future<void> _submitProfile() async {
     try {
+      print('[DEBUG] Starting profile submission');
       setState(() => _isSubmitting = true);
       if (!_formKey.currentState!.validate()) return;
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User not authenticated");
 
+      print('[DEBUG] Creating profile for: ${user.uid}');
       final profile = ProfileModel(
         userId: user.uid,
         fullName: nameController.text,
@@ -71,13 +73,16 @@ class _CreateProfileBottomSheetState
         selectedCategory: selectedCategory!,
       );
 
+      print('[DEBUG] Saving to Firestore...');
       await ref.read(profileProvider.notifier).updateProfile(profile);
+      print('[DEBUG] Firestore save successful');
       Navigator.of(context).pop(true);
     } catch (e) {
       print("Error saving profile: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error saving profile: ${e.toString()}")),
       );
+      Navigator.of(context).pop(false); // Pop with false on error
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
