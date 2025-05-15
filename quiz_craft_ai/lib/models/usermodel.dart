@@ -1,5 +1,5 @@
 class ProfileModel {
-  String userId; // 👈 Add this
+  String userId; 
   String fullName;
   String dateOfBirth;
   String gender;
