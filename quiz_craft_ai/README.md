@@ -1,16 +1,11 @@
-# quiz_craft_ai
+It’s a cross-platform learning app built with Flutter, Firebase, and Riverpod. The app is designed for school and college students and includes features like:
 
-A new Flutter project.
+AI-powered quiz generation from PDFs, images, and text (using Hugging Face API).
 
-## Getting Started
+Login & Profile system with details such as college/school info, subjects, and category.
 
-This project is a starting point for a Flutter application.
+Leaderboard & Analytics – filters by category, subcategory, and subject to show top students.
 
-A few resources to get you started if this is your first Flutter project:
+Light/Dark mode and user performance insights.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Result & History screen to track progress.
